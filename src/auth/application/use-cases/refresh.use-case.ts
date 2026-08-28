@@ -54,8 +54,12 @@ export class RefreshUseCase {
         RefreshToken.revoke(existingToken),
       );
 
+      const tokens = await this.issueAuthTokensService.issueTokens(
+        user,
+        role.name,
+      );
       this.logger.log(`Refreshed tokens for user ${user.email}`);
-      return await this.issueAuthTokensService.issueTokens(user, role.name);
+      return tokens;
     } catch (error) {
       this.logger.error('Failed to refresh tokens', error);
 
