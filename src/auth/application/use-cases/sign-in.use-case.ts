@@ -55,8 +55,12 @@ export class SignInUseCase {
         throw new Error(`Role "${user.roleId}" not found for user ${user.id}`);
       }
 
+      const tokens = await this.issueAuthTokensService.issueTokens(
+        user,
+        role.name,
+      );
       this.logger.log(`Signed in user ${user.email}`);
-      return await this.issueAuthTokensService.issueTokens(user, role.name);
+      return tokens;
     } catch (error) {
       this.logger.error(`Failed to sign in user ${props.email}`, error);
 
