@@ -1,0 +1,276 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  users User[]
+}
+
+model User {
+  id             String    @id @default(uuid())
+  firstName      String    @map("first_name")
+  lastName       String    @map("last_name")
+  email          String
+  hashedPassword String    @map("hashed_password")
+  avatar         String    @map("avatar")
+  disabled       Boolean   @default(false) @map("disabled")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  roleId String @map("role_id")
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  cart                    Cart?
+  passwordResetTokens     PasswordResetToken[]
+  accountActivationTokens AccountActivationToken[]
+  refreshTokens           RefreshToken[]
+  likedProductVariants    LikedProductVariant[]
+  orders                  Order[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  jti       String
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model AccountActivationToken {
+  id        String    @id @default(uuid())
+  jti       String
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  jti       String
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Cart {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  items CartItem[]
+}
+
+model CartItem {
+  id        String    @id @default(uuid())
+  quantity  Int       @default(1) @map("quantity")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  cartId String @map("cart_id")
+  cart   Cart   @relation(fields: [cartId], references: [id])
+
+  productVariantId String         @map("product_variant_id")
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  products Product[]
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  description String?   @map("description")
+  disabled    Boolean   @default(false) @map("disabled")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  variants ProductVariant[]
+  images   ProductImage[]
+}
+
+model ProductVariant {
+  id         String    @id @default(uuid())
+  sku        String
+  stock      Int       @default(0) @map("stock")
+  price      Float     @default(0) @map("price")
+  disabled   Boolean   @default(false) @map("disabled")
+  attributes Json      @map("attributes")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id])
+
+  productImage         ProductImage[]
+  cartItems            CartItem[]
+  likedProductVariants LikedProductVariant[]
+  productSnapshots     ProductSnapshot[]
+}
+
+model ProductImage {
+  id        String    @id @default(uuid())
+  imagePath String    @map("image_path")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  variantId String?         @map("variant_id")
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model LikedProductVariant {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  productVariantId String         @map("product_variant_id")
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+}
+
+enum OrderStatus {
+  pending
+  paid
+  processing
+  shipped
+  cancelled
+  delivered
+}
+
+enum PaymentMethod {
+  payment_link
+  payment_intent
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  totalPrice    Float         @map("total_price")
+  paymentMethod PaymentMethod @map("payment_method")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  promoSnapshotId String?        @unique @map("promo_snapshot_id")
+  promoSnapshot   PromoSnapshot? @relation(fields: [promoSnapshotId], references: [id])
+
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id        String    @id @default(uuid())
+  quantity  Int       @map("quantity")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  productSnapshotId String          @unique @map("product_snapshot_id")
+  productSnapshot   ProductSnapshot @relation(fields: [productSnapshotId], references: [id])
+
+  orderId String @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id])
+}
+
+model ProductSnapshot {
+  id          String    @id @default(uuid())
+  name        String    @map("name")
+  description String?   @map("description")
+  category    String    @map("category")
+  attributes  Json      @map("attributes")
+  price       Float     @map("price")
+  image       String    @map("image")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  productVariantId String         @map("product_variant_id")
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  orderItem OrderItem?
+}
+
+enum discount_type {
+  percentage
+  fixed
+}
+
+model Promo {
+  id                    String        @id @default(uuid())
+  code                  String        @map("code")
+  type                  discount_type @map("type")
+  value                 Float         @map("value")
+  expiration            DateTime?     @map("expiration")
+  remainUsages          Int?          @map("remain_usages")
+  minimumPurchaseAmount Float?        @map("minimum_purchase_amount")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  deletedAt             DateTime?     @map("deleted_at")
+
+  promoSnapshots PromoSnapshot[]
+}
+
+model PromoSnapshot {
+  id        String        @id @default(uuid())
+  code      String        @map("code")
+  type      discount_type @map("type")
+  value     Float         @map("value")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  deletedAt DateTime?     @map("deleted_at")
+
+  promoId String @map("promo_id")
+  promo   Promo  @relation(fields: [promoId], references: [id])
+
+  order Order?
+}
