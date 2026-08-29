@@ -24,5 +24,17 @@ describe('CaslAbilityFactory', () => {
 
       expect(ability.can(Action.Manage, 'Role')).toBe(false);
     });
+
+    it('grants manage permission on User to a manager', () => {
+      const ability = factory.createForUser('manager');
+
+      expect(ability.can(Action.Manage, 'User')).toBe(true);
+    });
+
+    it('denies manage permission on User to a non-manager', () => {
+      const ability = factory.createForUser('client');
+
+      expect(ability.can(Action.Manage, 'User')).toBe(false);
+    });
   });
 });
