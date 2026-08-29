@@ -25,5 +25,6 @@ import { DeleteCategoryUseCase } from './application/use-cases/delete-category.u
     JwtAuthGuard,
     PoliciesGuard,
   ],
+  exports: [CategoryRepository],
 })
 export class CategoriesModule {}
