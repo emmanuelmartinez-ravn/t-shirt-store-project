@@ -44,5 +44,6 @@ import { DeleteExpiredAccountActivationTokensUseCase } from './application/use-c
     },
     { provide: RefreshTokenRepository, useClass: PrismaRefreshTokenRepository },
   ],
+  exports: [UserRepository],
 })
 export class AuthModule {}
