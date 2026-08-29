@@ -5,9 +5,16 @@ import { AppService } from './app.service';
 import { RolesModule } from './roles/roles.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), RolesModule, PrismaModule, AuthModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    RolesModule,
+    PrismaModule,
+    AuthModule,
+    CategoriesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
