@@ -193,4 +193,34 @@ describe('PrismaUserRepository', () => {
       expect(result).toEqual(activatedUser);
     });
   });
+
+  describe('promoteUser', () => {
+    it('promotes the user and returns the mapped domain entity', async () => {
+      const promotedUser = User.promote(user, 'manager-role-id');
+      prisma.user.update.mockResolvedValue({
+        id: promotedUser.id,
+        firstName: promotedUser.firstName,
+        lastName: promotedUser.lastName,
+        email: promotedUser.email,
+        hashedPassword: promotedUser.hashedPassword,
+        avatar: promotedUser.avatar,
+        disabled: promotedUser.disabled,
+        createdAt: promotedUser.createdAt,
+        updatedAt: promotedUser.updatedAt,
+        deletedAt: null,
+        roleId: promotedUser.roleId,
+      });
+
+      const result = await repository.promoteUser(promotedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: promotedUser.id },
+        data: {
+          roleId: promotedUser.roleId,
+          updatedAt: promotedUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(promotedUser);
+    });
+  });
 });
