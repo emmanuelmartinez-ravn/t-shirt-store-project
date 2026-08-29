@@ -7,20 +7,28 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiGoneResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
+import { Action } from '../../../authorization/ability/action.enum';
+import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
+import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
+import { PoliciesGuard } from '../../../authorization/guards/policies.guard';
 import { CreateRoleUseCase } from '../../application/use-cases/create-role.use-case';
 import { DeleteRoleUseCase } from '../../application/use-cases/delete-role.use-case';
 import { GetAllRolesUseCase } from '../../application/use-cases/get-all-roles.use-case';
@@ -31,6 +39,25 @@ import { RoleResponseDto } from '../dto/role-response';
 import { RolesResponseMapper } from '../mappers/roles-response.mapper';
 
 @ApiTags('roles')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PoliciesGuard)
+@CheckPolicies((ability) => ability.can(Action.Manage, 'Role'))
+@ApiUnauthorizedResponse({
+  description: 'Missing, invalid, or expired access token',
+  type: ErrorResponseDto,
+  example: {
+    error: 'Invalid or expired token',
+    details: [],
+  },
+})
+@ApiForbiddenResponse({
+  description: 'Authenticated user is not a manager',
+  type: ErrorResponseDto,
+  example: {
+    error: 'Insufficient permissions',
+    details: [],
+  },
+})
 @Controller('roles')
 export class RolesController {
   constructor(

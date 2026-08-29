@@ -24,6 +24,7 @@ async function bootstrap() {
     .setTitle('T-Shirt Store API')
     .setDescription('API documentation for the T-Shirt Store backend')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
