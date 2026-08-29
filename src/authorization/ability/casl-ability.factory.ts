@@ -6,7 +6,7 @@ import {
 import { Injectable } from '@nestjs/common';
 import { Action } from './action.enum';
 
-export type AppSubjects = 'Role' | 'User' | 'all';
+export type AppSubjects = 'Role' | 'User' | 'Category' | 'Product' | 'all';
 export type AppAbility = MongoAbility<[Action, AppSubjects]>;
 
 const MANAGER_ROLE_NAME = 'manager';
@@ -19,6 +19,8 @@ export class CaslAbilityFactory {
     if (roleName === MANAGER_ROLE_NAME) {
       can(Action.Manage, 'Role');
       can(Action.Manage, 'User');
+      can(Action.Manage, 'Category');
+      can(Action.Manage, 'Product');
     }
 
     return build();
