@@ -4,6 +4,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Res,
 } from '@nestjs/common';
@@ -26,6 +27,7 @@ import { internalServerErrorExample } from '../../../../exceptions/dto/error-res
 import { ForgotPasswordUseCase } from '../../../application/use-cases/forgot-password.use-case';
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
+import { ResetPasswordUseCase } from '../../../application/use-cases/reset-password.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
 import { SignOutUseCase } from '../../../application/use-cases/sign-out.use-case';
 import { SignUpUseCase } from '../../../application/use-cases/sign-up.use-case';
@@ -35,6 +37,7 @@ import { AuthTokensResponseDto } from '../../dto/auth-tokens-response';
 import { ForgotPasswordDto } from '../../dto/forgot-password';
 import { RefreshDto } from '../../dto/refresh';
 import { ResendActivationDto } from '../../dto/resend-activation';
+import { ResetPasswordDto } from '../../dto/reset-password';
 import { SignInDto } from '../../dto/sign-in';
 import { SignOutDto } from '../../dto/sign-out';
 import { SignUpDto } from '../../dto/sign-up';
@@ -54,6 +57,7 @@ export class AuthController {
     private readonly refreshUseCase: RefreshUseCase,
     private readonly signOutUseCase: SignOutUseCase,
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
   ) {}
 
   @Post('sign-up')
@@ -296,5 +300,65 @@ export class AuthController {
   })
   public async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
     await this.forgotPasswordUseCase.execute(dto.email);
+  }
+
+  @Patch('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset a forgotten password using a reset token' })
+  @ApiOkResponse({
+    description: 'Updated user',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request, or the reset token is invalid or expired',
+    type: ErrorResponseDto,
+    examples: {
+      WeakPassword: {
+        summary: 'newPassword does not meet complexity requirements',
+        value: {
+          error: 'Bad Request',
+          details: [
+            'newPassword must be at least 8 characters long',
+            'newPassword must contain at least one uppercase letter',
+          ],
+        },
+      },
+      ConfirmMismatch: {
+        summary: 'confirmPassword does not match newPassword',
+        value: {
+          error: 'Bad Request',
+          details: ['confirmPassword must match newPassword'],
+        },
+      },
+      InvalidOrExpiredToken: {
+        summary: 'token is invalid, expired, or already used',
+        value: {
+          error: 'Password reset token is invalid or expired',
+          details: [],
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.resetPasswordUseCase.execute({
+      token: dto.token,
+      newPassword: dto.newPassword,
+    });
+    return UserResponseMapper.toResponse(user);
   }
 }

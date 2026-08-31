@@ -5,6 +5,7 @@ import { AccountActivationToken } from '../../../domain/models/account-activatio
 import { ForgotPasswordUseCase } from '../../../application/use-cases/forgot-password.use-case';
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
+import { ResetPasswordUseCase } from '../../../application/use-cases/reset-password.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
 import { SignOutUseCase } from '../../../application/use-cases/sign-out.use-case';
 import { SignUpUseCase } from '../../../application/use-cases/sign-up.use-case';
@@ -22,6 +23,7 @@ describe('AuthController', () => {
   let refreshUseCase: jest.Mocked<RefreshUseCase>;
   let signOutUseCase: jest.Mocked<SignOutUseCase>;
   let forgotPasswordUseCase: jest.Mocked<ForgotPasswordUseCase>;
+  let resetPasswordUseCase: jest.Mocked<ResetPasswordUseCase>;
 
   beforeEach(() => {
     signUpUseCase = {
@@ -45,6 +47,9 @@ describe('AuthController', () => {
     forgotPasswordUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<ForgotPasswordUseCase>;
+    resetPasswordUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<ResetPasswordUseCase>;
 
     controller = new AuthController(
       signUpUseCase,
@@ -54,6 +59,7 @@ describe('AuthController', () => {
       refreshUseCase,
       signOutUseCase,
       forgotPasswordUseCase,
+      resetPasswordUseCase,
     );
   });
 
@@ -221,6 +227,37 @@ describe('AuthController', () => {
         'joe.doe@example.com',
       );
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('delegates to the use case and returns the mapped response', async () => {
+      const user = User.restore({
+        id: 'user-id',
+        firstName: 'Joe',
+        lastName: 'Doe',
+        email: 'joe.doe@example.com',
+        hashedPassword: 'new-hashed',
+        avatar: '',
+        disabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        roleId: 'role-id',
+      });
+      resetPasswordUseCase.execute.mockResolvedValue(user);
+
+      const result = await controller.resetPassword({
+        token: 'jti-value',
+        newPassword: 'NewSecret1!',
+        confirmPassword: 'NewSecret1!',
+      });
+
+      expect(resetPasswordUseCase.execute).toHaveBeenCalledWith({
+        token: 'jti-value',
+        newPassword: 'NewSecret1!',
+      });
+      expect(result).toEqual(UserResponseMapper.toResponse(user));
     });
   });
 });

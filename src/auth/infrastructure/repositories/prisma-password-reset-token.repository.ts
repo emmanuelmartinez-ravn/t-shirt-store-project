@@ -24,4 +24,24 @@ export class PrismaPasswordResetTokenRepository extends PasswordResetTokenReposi
 
     return PasswordResetTokenPersistenceMapper.toDomain(record);
   }
+
+  async getTokenByJti(jti: string): Promise<PasswordResetToken | null> {
+    const record = await this.prisma.passwordResetToken.findFirst({
+      where: { jti, deletedAt: null },
+    });
+
+    return record ? PasswordResetTokenPersistenceMapper.toDomain(record) : null;
+  }
+
+  async consumeToken(token: PasswordResetToken): Promise<PasswordResetToken> {
+    const record = await this.prisma.passwordResetToken.update({
+      where: { id: token.id },
+      data: {
+        updatedAt: token.updatedAt,
+        deletedAt: token.deletedAt,
+      },
+    });
+
+    return PasswordResetTokenPersistenceMapper.toDomain(record);
+  }
 }
