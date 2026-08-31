@@ -110,4 +110,20 @@ export class User {
       roleId,
     });
   }
+
+  static changePassword(user: User, hashedPassword: string): User {
+    return new User({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      hashedPassword,
+      avatar: user.avatar,
+      disabled: user.disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: user.deletedAt,
+      roleId: user.roleId,
+    });
+  }
 }

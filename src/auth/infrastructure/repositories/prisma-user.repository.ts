@@ -80,4 +80,16 @@ export class PrismaUserRepository extends UserRepository {
 
     return UserPersistenceMapper.toDomain(record);
   }
+
+  async updatePassword(user: User): Promise<User> {
+    const record = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        hashedPassword: user.hashedPassword,
+        updatedAt: user.updatedAt,
+      },
+    });
+
+    return UserPersistenceMapper.toDomain(record);
+  }
 }

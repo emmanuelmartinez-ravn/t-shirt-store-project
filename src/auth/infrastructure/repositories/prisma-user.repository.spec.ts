@@ -223,4 +223,34 @@ describe('PrismaUserRepository', () => {
       expect(result).toEqual(promotedUser);
     });
   });
+
+  describe('updatePassword', () => {
+    it('updates the hashed password and returns the mapped domain entity', async () => {
+      const updatedUser = User.changePassword(user, 'new-hashed');
+      prisma.user.update.mockResolvedValue({
+        id: updatedUser.id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        hashedPassword: updatedUser.hashedPassword,
+        avatar: updatedUser.avatar,
+        disabled: updatedUser.disabled,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+        deletedAt: null,
+        roleId: updatedUser.roleId,
+      });
+
+      const result = await repository.updatePassword(updatedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: updatedUser.id },
+        data: {
+          hashedPassword: 'new-hashed',
+          updatedAt: updatedUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(updatedUser);
+    });
+  });
 });

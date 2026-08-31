@@ -1,47 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
-
-const PASSWORD_MIN_LENGTH = 8;
-
-const PASSWORD_SYMBOLS = [
-  '!',
-  '@',
-  '#',
-  '$',
-  '%',
-  '^',
-  '&',
-  '*',
-  '(',
-  ')',
-  '-',
-  '_',
-  '+',
-  '=',
-  '[',
-  ']',
-  '{',
-  '}',
-  '|',
-  ':',
-  ';',
-  '"',
-  "'",
-  ',',
-  '.',
-  '<',
-  '>',
-  '/',
-  '?',
-  '~',
-  '`',
-  '\\',
-];
-
-const PASSWORD_SYMBOLS_PATTERN = PASSWORD_SYMBOLS.map(
-  (symbol) => `\\${symbol}`,
-).join('');
+import { IsNotEmpty, IsString } from 'class-validator';
+import { IsStrongPassword } from '../validators/is-strong-password';
 
 export class SignUpDto {
   @ApiProperty({
@@ -78,20 +38,6 @@ export class SignUpDto {
   @Transform(({ value }: { value: string }) => value.trim())
   @IsString()
   @IsNotEmpty()
-  @MinLength(PASSWORD_MIN_LENGTH, {
-    message: `password must be at least ${PASSWORD_MIN_LENGTH} characters long`,
-  })
-  @Matches(/[a-z]/, {
-    message: 'password must contain at least one lowercase letter',
-  })
-  @Matches(/[A-Z]/, {
-    message: 'password must contain at least one uppercase letter',
-  })
-  @Matches(/\d/, {
-    message: 'password must contain at least one number',
-  })
-  @Matches(new RegExp(`[${PASSWORD_SYMBOLS_PATTERN}]`), {
-    message: `password must contain at least one symbol (${PASSWORD_SYMBOLS.join(' ')})`,
-  })
+  @IsStrongPassword()
   password!: string;
 }
