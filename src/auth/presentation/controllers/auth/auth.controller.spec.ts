@@ -128,11 +128,13 @@ describe('AuthController', () => {
       const res = mockResponse();
 
       const result = await controller.resendActivation(
-        { userId: 'user-id' },
+        { email: 'joe.doe@example.com' },
         res,
       );
 
-      expect(resendActivationUseCase.execute).toHaveBeenCalledWith('user-id');
+      expect(resendActivationUseCase.execute).toHaveBeenCalledWith(
+        'joe.doe@example.com',
+      );
       expect(res.status).toHaveBeenCalledWith(HttpStatus.OK);
       expect(result).toEqual(
         AccountActivationTokenResponseMapper.toResponse(token),
@@ -147,7 +149,7 @@ describe('AuthController', () => {
       const res = mockResponse();
 
       const result = await controller.resendActivation(
-        { userId: 'user-id' },
+        { email: 'joe.doe@example.com' },
         res,
       );
 
