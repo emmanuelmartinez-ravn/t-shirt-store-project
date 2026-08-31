@@ -44,7 +44,6 @@ describe('RefreshUseCase', () => {
     id: 'token-id',
     jti: 'jti-value',
     expiresAt: new Date(Date.now() + 60_000),
-    revokedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -131,13 +130,16 @@ describe('RefreshUseCase', () => {
   it('translates a revoked token into an UnauthorizedException', async () => {
     const revokedToken = RefreshToken.restore({
       ...validToken,
-      revokedAt: new Date(),
+      deletedAt: new Date(),
     });
     refreshTokenRepository.getTokenByJti.mockResolvedValue(revokedToken);
+    userRepository.getUserById.mockResolvedValue(user);
+    roleRepository.getRoleById.mockResolvedValue(role);
 
     await expect(useCase.execute('jti-value')).rejects.toThrow(
       UnauthorizedException,
     );
+    expect(refreshTokenRepository.revokeToken).not.toHaveBeenCalled();
   });
 
   it('translates a disabled user into an UnauthorizedException', async () => {

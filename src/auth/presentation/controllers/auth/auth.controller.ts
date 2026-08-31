@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
   Post,
@@ -12,6 +13,7 @@ import {
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -24,6 +26,7 @@ import { internalServerErrorExample } from '../../../../exceptions/dto/error-res
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
+import { SignOutUseCase } from '../../../application/use-cases/sign-out.use-case';
 import { SignUpUseCase } from '../../../application/use-cases/sign-up.use-case';
 import { VerifyAccountUseCase } from '../../../application/use-cases/verify-account.use-case';
 import { AccountActivationTokenResponseDto } from '../../dto/account-activation-token-response';
@@ -31,6 +34,7 @@ import { AuthTokensResponseDto } from '../../dto/auth-tokens-response';
 import { RefreshDto } from '../../dto/refresh';
 import { ResendActivationDto } from '../../dto/resend-activation';
 import { SignInDto } from '../../dto/sign-in';
+import { SignOutDto } from '../../dto/sign-out';
 import { SignUpDto } from '../../dto/sign-up';
 import { UserResponseDto } from '../../dto/user-response';
 import { VerifyAccountDto } from '../../dto/verify-account';
@@ -46,6 +50,7 @@ export class AuthController {
     private readonly resendActivationUseCase: ResendActivationUseCase,
     private readonly signInUseCase: SignInUseCase,
     private readonly refreshUseCase: RefreshUseCase,
+    private readonly signOutUseCase: SignOutUseCase,
   ) {}
 
   @Post('sign-up')
@@ -234,5 +239,36 @@ export class AuthController {
     @Body() dto: RefreshDto,
   ): Promise<AuthTokensResponseDto> {
     return this.refreshUseCase.execute(dto.refreshToken);
+  }
+
+  @Delete('sign-out')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Sign out and invalidate a refresh token' })
+  @ApiNoContentResponse({
+    description: 'Refresh token invalidated',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Bad Request',
+      details: ['refreshToken should not be empty'],
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid or expired refresh token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Refresh token is invalid or expired',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async signOut(@Body() dto: SignOutDto): Promise<void> {
+    await this.signOutUseCase.execute(dto.refreshToken);
   }
 }

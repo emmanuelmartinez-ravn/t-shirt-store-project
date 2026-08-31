@@ -7,7 +7,6 @@ export class RefreshTokenPersistenceMapper {
       id: record.id,
       jti: record.jti,
       expiresAt: record.expiresAt,
-      revokedAt: record.revokedAt,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       deletedAt: record.deletedAt,

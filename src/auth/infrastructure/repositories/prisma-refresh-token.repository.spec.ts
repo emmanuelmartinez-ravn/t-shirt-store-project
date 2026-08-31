@@ -16,7 +16,6 @@ describe('PrismaRefreshTokenRepository', () => {
     id: 'token-id',
     jti: 'jti-value',
     expiresAt: new Date(Date.now() + 60_000),
-    revokedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -42,7 +41,6 @@ describe('PrismaRefreshTokenRepository', () => {
         id: token.id,
         jti: token.jti,
         expiresAt: token.expiresAt,
-        revokedAt: null,
         createdAt: token.createdAt,
         updatedAt: token.updatedAt,
         deletedAt: null,
@@ -56,7 +54,6 @@ describe('PrismaRefreshTokenRepository', () => {
           id: token.id,
           jti: token.jti,
           expiresAt: token.expiresAt,
-          revokedAt: token.revokedAt,
           createdAt: token.createdAt,
           updatedAt: token.updatedAt,
           userId: token.userId,
@@ -72,7 +69,6 @@ describe('PrismaRefreshTokenRepository', () => {
         id: token.id,
         jti: token.jti,
         expiresAt: token.expiresAt,
-        revokedAt: null,
         createdAt: token.createdAt,
         updatedAt: token.updatedAt,
         deletedAt: null,
@@ -103,10 +99,9 @@ describe('PrismaRefreshTokenRepository', () => {
         id: revoked.id,
         jti: revoked.jti,
         expiresAt: revoked.expiresAt,
-        revokedAt: revoked.revokedAt,
         createdAt: revoked.createdAt,
         updatedAt: revoked.updatedAt,
-        deletedAt: null,
+        deletedAt: revoked.deletedAt,
         userId: revoked.userId,
       });
 
@@ -115,7 +110,7 @@ describe('PrismaRefreshTokenRepository', () => {
       expect(prisma.refreshToken.update).toHaveBeenCalledWith({
         where: { id: revoked.id },
         data: {
-          revokedAt: revoked.revokedAt,
+          deletedAt: revoked.deletedAt,
           updatedAt: revoked.updatedAt,
         },
       });

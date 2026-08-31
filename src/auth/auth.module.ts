@@ -17,6 +17,7 @@ import { VerifyAccountUseCase } from './application/use-cases/verify-account.use
 import { ResendActivationUseCase } from './application/use-cases/resend-activation.use-case';
 import { SignInUseCase } from './application/use-cases/sign-in.use-case';
 import { RefreshUseCase } from './application/use-cases/refresh.use-case';
+import { SignOutUseCase } from './application/use-cases/sign-out.use-case';
 import { DeleteExpiredAccountActivationTokensUseCase } from './application/use-cases/delete-expired-account-activation-tokens.use-case';
 
 @Module({
@@ -36,6 +37,7 @@ import { DeleteExpiredAccountActivationTokensUseCase } from './application/use-c
     ResendActivationUseCase,
     SignInUseCase,
     RefreshUseCase,
+    SignOutUseCase,
     IssueAuthTokensService,
     DeleteExpiredAccountActivationTokensUseCase,
     AccountActivationTokensScheduler,
