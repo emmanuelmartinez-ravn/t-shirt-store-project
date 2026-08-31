@@ -26,18 +26,18 @@ export class ResendActivationUseCase {
     private readonly emailQueueService: EmailQueueService,
   ) {}
 
-  async execute(userId: string): Promise<ResendActivationResult> {
+  async execute(email: string): Promise<ResendActivationResult> {
     try {
-      const user = await this.userRepository.getUserById(userId);
+      const user = await this.userRepository.getUserByEmail(email);
 
       if (!user) {
-        throw new UserNotFoundError(userId);
+        throw new UserNotFoundError(email);
       }
 
       const now = new Date();
       const existingToken =
         await this.accountActivationTokenRepository.getValidTokenByUserId(
-          userId,
+          user.id,
           now,
         );
 
@@ -46,7 +46,10 @@ export class ResendActivationUseCase {
 
       if (!token) {
         const ttlMinutes = getAccountActivationTokenTtlMinutes();
-        const newToken = AccountActivationToken.create({ userId, ttlMinutes });
+        const newToken = AccountActivationToken.create({
+          userId: user.id,
+          ttlMinutes,
+        });
         token =
           await this.accountActivationTokenRepository.createToken(newToken);
         created = true;
@@ -66,10 +69,7 @@ export class ResendActivationUseCase {
 
       return { token, created };
     } catch (error) {
-      this.logger.error(
-        `Failed to resend activation for user ${userId}`,
-        error,
-      );
+      this.logger.error(`Failed to resend activation for user ${email}`, error);
 
       if (error instanceof UserNotFoundError) {
         throw new NotFoundException({ error: 'User not found', details: [] });

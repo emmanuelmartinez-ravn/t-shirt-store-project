@@ -59,7 +59,7 @@ describe('ResendActivationUseCase', () => {
   });
 
   it('returns the existing valid token without creating a new one', async () => {
-    userRepository.getUserById.mockResolvedValue(user);
+    userRepository.getUserByEmail.mockResolvedValue(user);
     const existingToken = AccountActivationToken.restore({
       id: 'token-id',
       jti: 'jti-value',
@@ -73,8 +73,12 @@ describe('ResendActivationUseCase', () => {
       existingToken,
     );
 
-    const result = await useCase.execute(user.id);
+    const result = await useCase.execute(user.email);
 
+    expect(userRepository.getUserByEmail).toHaveBeenCalledWith(user.email);
+    expect(
+      accountActivationTokenRepository.getValidTokenByUserId,
+    ).toHaveBeenCalledWith(user.id, expect.any(Date));
     expect(result).toEqual({ token: existingToken, created: false });
     expect(accountActivationTokenRepository.createToken).not.toHaveBeenCalled();
     expect(
@@ -83,7 +87,7 @@ describe('ResendActivationUseCase', () => {
   });
 
   it('creates a new token when none are valid', async () => {
-    userRepository.getUserById.mockResolvedValue(user);
+    userRepository.getUserByEmail.mockResolvedValue(user);
     accountActivationTokenRepository.getValidTokenByUserId.mockResolvedValue(
       null,
     );
@@ -91,7 +95,7 @@ describe('ResendActivationUseCase', () => {
       Promise.resolve(token),
     );
 
-    const result = await useCase.execute(user.id);
+    const result = await useCase.execute(user.email);
 
     const [createdTokenArg] =
       accountActivationTokenRepository.createToken.mock.calls[0];
@@ -104,7 +108,7 @@ describe('ResendActivationUseCase', () => {
   });
 
   it('still returns the token when enqueuing the verification email fails', async () => {
-    userRepository.getUserById.mockResolvedValue(user);
+    userRepository.getUserByEmail.mockResolvedValue(user);
     const existingToken = AccountActivationToken.restore({
       id: 'token-id',
       jti: 'jti-value',
@@ -121,15 +125,15 @@ describe('ResendActivationUseCase', () => {
       new Error('queue unavailable'),
     );
 
-    const result = await useCase.execute(user.id);
+    const result = await useCase.execute(user.email);
 
     expect(result).toEqual({ token: existingToken, created: false });
   });
 
   it('translates a missing user into a NotFoundException', async () => {
-    userRepository.getUserById.mockResolvedValue(null);
+    userRepository.getUserByEmail.mockResolvedValue(null);
 
-    await expect(useCase.execute('missing-id')).rejects.toThrow(
+    await expect(useCase.execute('missing@example.com')).rejects.toThrow(
       NotFoundException,
     );
     expect(
@@ -138,9 +142,11 @@ describe('ResendActivationUseCase', () => {
   });
 
   it('translates unexpected errors into an InternalServerErrorException', async () => {
-    userRepository.getUserById.mockRejectedValue(new Error('connection lost'));
+    userRepository.getUserByEmail.mockRejectedValue(
+      new Error('connection lost'),
+    );
 
-    await expect(useCase.execute(user.id)).rejects.toThrow(
+    await expect(useCase.execute(user.email)).rejects.toThrow(
       InternalServerErrorException,
     );
   });
