@@ -34,6 +34,7 @@ Prisma (schema at `prisma/schema.prisma`, client generated to `generated/prisma`
 ```bash
 pnpm prisma migrate dev      # create/apply a migration locally
 pnpm prisma generate         # regenerate the client after schema changes
+pnpm prisma db seed          # seed the default roles (prisma/seed.ts: "manager", "client")
 ```
 The `prisma-cli` and `prisma-client-api` skills are available for detailed Prisma command/query reference.
 
