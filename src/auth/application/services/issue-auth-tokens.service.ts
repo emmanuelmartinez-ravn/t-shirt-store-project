@@ -1,15 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { User } from '../../domain/models/user';
 import { RefreshToken } from '../../domain/models/refresh-token';
 import { RefreshTokenRepository } from '../../infrastructure/repositories/refresh-token.repository';
 
-const DEFAULT_ACCESS_TOKEN_TTL = '15m';
+const DEFAULT_ACCESS_TOKEN_TTL_MINUTES = 15;
 const REFRESH_TOKEN_TTL_MINUTES = 60;
+const SECONDS_PER_MINUTE = 60;
 
-function getAccessTokenTtl(): JwtSignOptions['expiresIn'] {
-  return (process.env.ACCESS_TOKEN_TTL ??
-    DEFAULT_ACCESS_TOKEN_TTL) as JwtSignOptions['expiresIn'];
+function getAccessTokenTtlSeconds(): number {
+  const configured = Number(process.env.ACCESS_TOKEN_TTL);
+  const minutes =
+    Number.isFinite(configured) && configured > 0
+      ? configured
+      : DEFAULT_ACCESS_TOKEN_TTL_MINUTES;
+
+  return minutes * SECONDS_PER_MINUTE;
 }
 
 export interface AuthTokens {
@@ -32,7 +38,7 @@ export class IssueAuthTokensService {
         role: roleName,
         roleId: user.roleId,
       },
-      { expiresIn: getAccessTokenTtl() },
+      { expiresIn: getAccessTokenTtlSeconds() },
     );
 
     const refreshTokenEntity = RefreshToken.create({

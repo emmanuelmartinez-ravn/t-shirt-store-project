@@ -49,7 +49,7 @@ describe('IssueAuthTokensService', () => {
 
     expect(jwtService.signAsync).toHaveBeenCalledWith(
       { sub: user.id, email: user.email, role: 'client', roleId: user.roleId },
-      { expiresIn: '15m' },
+      { expiresIn: 15 * 60 },
     );
     const [createdTokenArg] = refreshTokenRepository.createToken.mock.calls[0];
     expect(createdTokenArg.userId).toBe(user.id);
@@ -57,6 +57,46 @@ describe('IssueAuthTokensService', () => {
     expect(result).toEqual({
       accessToken: 'signed.jwt.token',
       refreshToken: createdTokenArg.jti,
+    });
+  });
+
+  describe('ACCESS_TOKEN_TTL env var', () => {
+    const originalAccessTokenTtl = process.env.ACCESS_TOKEN_TTL;
+
+    afterEach(() => {
+      if (originalAccessTokenTtl === undefined) {
+        delete process.env.ACCESS_TOKEN_TTL;
+      } else {
+        process.env.ACCESS_TOKEN_TTL = originalAccessTokenTtl;
+      }
+    });
+
+    it('converts a configured value from minutes into seconds for the JWT expiresIn option', async () => {
+      process.env.ACCESS_TOKEN_TTL = '30';
+      jwtService.signAsync.mockResolvedValue('signed.jwt.token');
+      refreshTokenRepository.createToken.mockImplementation((token) =>
+        Promise.resolve(token),
+      );
+
+      await service.issueTokens(user, 'client');
+
+      expect(jwtService.signAsync).toHaveBeenCalledWith(expect.anything(), {
+        expiresIn: 30 * 60,
+      });
+    });
+
+    it('falls back to the default TTL when the configured value is invalid', async () => {
+      process.env.ACCESS_TOKEN_TTL = 'not-a-number';
+      jwtService.signAsync.mockResolvedValue('signed.jwt.token');
+      refreshTokenRepository.createToken.mockImplementation((token) =>
+        Promise.resolve(token),
+      );
+
+      await service.issueTokens(user, 'client');
+
+      expect(jwtService.signAsync).toHaveBeenCalledWith(expect.anything(), {
+        expiresIn: 15 * 60,
+      });
     });
   });
 });
