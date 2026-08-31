@@ -1,25 +1,22 @@
-import * as bcrypt from 'bcrypt';
 import {
-  BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { User } from '../../../auth/domain/models/user';
 import { UserRepository } from '../../../auth/infrastructure/repositories/user.repository';
-import { UpdatePasswordUseCase } from './update-password.use-case';
+import { UpdateProfileUseCase } from './update-profile.use-case';
 
-describe('UpdatePasswordUseCase', () => {
-  let useCase: UpdatePasswordUseCase;
+describe('UpdateProfileUseCase', () => {
+  let useCase: UpdateProfileUseCase;
   let userRepository: jest.Mocked<UserRepository>;
 
-  const oldPassword = 'OldSecret1!';
   const user = User.restore({
     id: 'user-id',
     firstName: 'Joe',
     lastName: 'Doe',
     email: 'joe.doe@example.com',
-    hashedPassword: bcrypt.hashSync(oldPassword, 10),
+    hashedPassword: 'hashed',
     avatar: '',
     disabled: false,
     createdAt: new Date(),
@@ -39,42 +36,42 @@ describe('UpdatePasswordUseCase', () => {
       updateProfile: jest.fn(),
     };
 
-    useCase = new UpdatePasswordUseCase(userRepository);
+    useCase = new UpdateProfileUseCase(userRepository);
   });
 
   it('is defined', () => {
     expect(useCase).toBeDefined();
   });
 
-  it('hashes and persists the new password when the old one matches', async () => {
+  it('updates and persists the name when the user is found and enabled', async () => {
     userRepository.getUserById.mockResolvedValue(user);
-    userRepository.updatePassword.mockImplementation((updated) =>
+    userRepository.updateProfile.mockImplementation((updated) =>
       Promise.resolve(updated),
     );
 
     const result = await useCase.execute('user-id', {
-      oldPassword,
-      newPassword: 'NewSecret1!',
+      firstName: 'Jane',
+      lastName: 'Smith',
     });
 
-    const [persistedArg] = userRepository.updatePassword.mock.calls[0];
-    expect(persistedArg.hashedPassword).not.toBe(user.hashedPassword);
-    expect(bcrypt.compareSync('NewSecret1!', persistedArg.hashedPassword)).toBe(
-      true,
+    expect(userRepository.updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'user-id',
+        firstName: 'Jane',
+        lastName: 'Smith',
+      }),
     );
-    expect(result.hashedPassword).toBe(persistedArg.hashedPassword);
+    expect(result.firstName).toBe('Jane');
+    expect(result.lastName).toBe('Smith');
   });
 
   it('translates a missing user into a NotFoundException', async () => {
     userRepository.getUserById.mockResolvedValue(null);
 
     await expect(
-      useCase.execute('missing-id', {
-        oldPassword,
-        newPassword: 'NewSecret1!',
-      }),
+      useCase.execute('missing-id', { firstName: 'Jane', lastName: 'Smith' }),
     ).rejects.toThrow(NotFoundException);
-    expect(userRepository.updatePassword).not.toHaveBeenCalled();
+    expect(userRepository.updateProfile).not.toHaveBeenCalled();
   });
 
   it('translates a soft-deleted user into a NotFoundException', async () => {
@@ -82,12 +79,9 @@ describe('UpdatePasswordUseCase', () => {
     userRepository.getUserById.mockResolvedValue(deletedUser);
 
     await expect(
-      useCase.execute('user-id', {
-        oldPassword,
-        newPassword: 'NewSecret1!',
-      }),
+      useCase.execute('user-id', { firstName: 'Jane', lastName: 'Smith' }),
     ).rejects.toThrow(NotFoundException);
-    expect(userRepository.updatePassword).not.toHaveBeenCalled();
+    expect(userRepository.updateProfile).not.toHaveBeenCalled();
   });
 
   it('translates a disabled user into a ForbiddenException', async () => {
@@ -95,34 +89,16 @@ describe('UpdatePasswordUseCase', () => {
     userRepository.getUserById.mockResolvedValue(disabledUser);
 
     await expect(
-      useCase.execute('user-id', {
-        oldPassword,
-        newPassword: 'NewSecret1!',
-      }),
+      useCase.execute('user-id', { firstName: 'Jane', lastName: 'Smith' }),
     ).rejects.toThrow(ForbiddenException);
-    expect(userRepository.updatePassword).not.toHaveBeenCalled();
-  });
-
-  it('translates a mismatched old password into a BadRequestException', async () => {
-    userRepository.getUserById.mockResolvedValue(user);
-
-    await expect(
-      useCase.execute('user-id', {
-        oldPassword: 'WrongPassword1!',
-        newPassword: 'NewSecret1!',
-      }),
-    ).rejects.toThrow(BadRequestException);
-    expect(userRepository.updatePassword).not.toHaveBeenCalled();
+    expect(userRepository.updateProfile).not.toHaveBeenCalled();
   });
 
   it('translates unexpected errors into an InternalServerErrorException', async () => {
     userRepository.getUserById.mockRejectedValue(new Error('connection lost'));
 
     await expect(
-      useCase.execute('user-id', {
-        oldPassword,
-        newPassword: 'NewSecret1!',
-      }),
+      useCase.execute('user-id', { firstName: 'Jane', lastName: 'Smith' }),
     ).rejects.toThrow(InternalServerErrorException);
   });
 });

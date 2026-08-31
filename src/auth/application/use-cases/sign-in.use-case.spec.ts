@@ -55,6 +55,7 @@ describe('SignInUseCase', () => {
       getUserByEmail: jest.fn(),
       activateUser: jest.fn(),
       updatePassword: jest.fn(),
+      updateProfile: jest.fn(),
     };
     roleRepository = {
       createRole: jest.fn(),

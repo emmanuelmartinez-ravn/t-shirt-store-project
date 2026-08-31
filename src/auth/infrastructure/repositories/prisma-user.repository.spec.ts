@@ -253,4 +253,38 @@ describe('PrismaUserRepository', () => {
       expect(result).toEqual(updatedUser);
     });
   });
+
+  describe('updateProfile', () => {
+    it('updates the name and returns the mapped domain entity', async () => {
+      const updatedUser = User.updateProfile(user, {
+        firstName: 'Jane',
+        lastName: 'Smith',
+      });
+      prisma.user.update.mockResolvedValue({
+        id: updatedUser.id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        hashedPassword: updatedUser.hashedPassword,
+        avatar: updatedUser.avatar,
+        disabled: updatedUser.disabled,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+        deletedAt: null,
+        roleId: updatedUser.roleId,
+      });
+
+      const result = await repository.updateProfile(updatedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: updatedUser.id },
+        data: {
+          firstName: 'Jane',
+          lastName: 'Smith',
+          updatedAt: updatedUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(updatedUser);
+    });
+  });
 });

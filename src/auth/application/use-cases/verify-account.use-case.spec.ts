@@ -34,6 +34,7 @@ describe('VerifyAccountUseCase', () => {
       getUserByEmail: jest.fn(),
       activateUser: jest.fn(),
       updatePassword: jest.fn(),
+      updateProfile: jest.fn(),
     };
     accountActivationTokenRepository = {
       createToken: jest.fn(),

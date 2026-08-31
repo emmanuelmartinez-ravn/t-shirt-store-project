@@ -33,7 +33,9 @@ import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
+import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { UpdatePasswordDto } from '../dto/update-password';
+import { UpdateProfileDto } from '../dto/update-profile';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -52,6 +54,7 @@ export class UsersController {
   constructor(
     private readonly promoteUserToManagerUseCase: PromoteUserToManagerUseCase,
     private readonly updatePasswordUseCase: UpdatePasswordUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
 
   @Post(':id/promotion')
@@ -196,6 +199,54 @@ export class UsersController {
     const user = await this.updatePasswordUseCase.execute(req.user!.sub, {
       oldPassword: dto.oldPassword,
       newPassword: dto.newPassword,
+    });
+    return UserResponseMapper.toResponse(user);
+  }
+
+  @Patch('profile')
+  @HttpCode(HttpStatus.OK)
+  @CheckPolicies(() => true)
+  @ApiOperation({ summary: "Update the authenticated user's name" })
+  @ApiOkResponse({
+    description: 'Updated user',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Bad Request',
+      details: ['firstName should not be empty'],
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user is disabled',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User is disabled',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async updateProfile(
+    @Req() req: Request,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.updateProfileUseCase.execute(req.user!.sub, {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
     });
     return UserResponseMapper.toResponse(user);
   }
