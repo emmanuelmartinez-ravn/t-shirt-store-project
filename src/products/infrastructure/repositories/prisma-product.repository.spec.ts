@@ -14,12 +14,14 @@ describe('PrismaProductRepository', () => {
       count: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
+      findFirst: jest.Mock;
     };
   };
 
   const product = Product.restore({
     id: 'product-id',
     name: 'Classic Tee',
+    code: 'TS-000001',
     description: 'A classic cotton t-shirt',
     disabled: false,
     createdAt: new Date(),
@@ -36,6 +38,7 @@ describe('PrismaProductRepository', () => {
         count: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+        findFirst: jest.fn(),
       },
     };
     repository = new PrismaProductRepository(
@@ -48,6 +51,7 @@ describe('PrismaProductRepository', () => {
       prisma.product.create.mockResolvedValue({
         id: product.id,
         name: product.name,
+        code: product.code,
         description: product.description,
         disabled: product.disabled,
         createdAt: product.createdAt,
@@ -62,6 +66,7 @@ describe('PrismaProductRepository', () => {
         data: {
           id: product.id,
           name: product.name,
+          code: product.code,
           description: product.description,
           disabled: product.disabled,
           createdAt: product.createdAt,
@@ -72,15 +77,53 @@ describe('PrismaProductRepository', () => {
       expect(result).toEqual(product);
     });
 
-    it('translates a unique constraint violation into ProductAlreadyExistsError', async () => {
+    it('translates a unique constraint violation on the name into ProductAlreadyExistsError', async () => {
       prisma.product.create.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
           code: 'P2002',
           clientVersion: '7.9.1',
+          meta: { target: ['name'] },
         }),
       );
 
       await expect(repository.createProduct(product)).rejects.toThrow(
+        ProductAlreadyExistsError,
+      );
+    });
+
+    it('rethrows a unique constraint violation on the code unchanged', async () => {
+      const codeCollisionError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '7.9.1',
+          meta: { target: ['code'] },
+        },
+      );
+      prisma.product.create.mockRejectedValue(codeCollisionError);
+
+      await expect(repository.createProduct(product)).rejects.toThrow(
+        codeCollisionError,
+      );
+      await expect(repository.createProduct(product)).rejects.not.toThrow(
+        ProductAlreadyExistsError,
+      );
+    });
+
+    it('rethrows a unique constraint violation with no target metadata unchanged', async () => {
+      const untargetedError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '7.9.1',
+        },
+      );
+      prisma.product.create.mockRejectedValue(untargetedError);
+
+      await expect(repository.createProduct(product)).rejects.toThrow(
+        untargetedError,
+      );
+      await expect(repository.createProduct(product)).rejects.not.toThrow(
         ProductAlreadyExistsError,
       );
     });
@@ -100,6 +143,7 @@ describe('PrismaProductRepository', () => {
         {
           id: product.id,
           name: product.name,
+          code: product.code,
           description: product.description,
           disabled: product.disabled,
           createdAt: product.createdAt,
@@ -154,6 +198,7 @@ describe('PrismaProductRepository', () => {
       prisma.product.update.mockResolvedValue({
         id: product.id,
         name: product.name,
+        code: product.code,
         description: product.description,
         disabled: product.disabled,
         createdAt: product.createdAt,
@@ -217,6 +262,7 @@ describe('PrismaProductRepository', () => {
       prisma.product.update.mockResolvedValue({
         id: deletedProduct.id,
         name: deletedProduct.name,
+        code: deletedProduct.code,
         description: deletedProduct.description,
         disabled: deletedProduct.disabled,
         createdAt: deletedProduct.createdAt,
@@ -264,6 +310,7 @@ describe('PrismaProductRepository', () => {
       prisma.product.findUnique.mockResolvedValue({
         id: product.id,
         name: product.name,
+        code: product.code,
         description: product.description,
         disabled: product.disabled,
         createdAt: product.createdAt,
@@ -286,6 +333,35 @@ describe('PrismaProductRepository', () => {
       const result = await repository.getProductById('missing');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getLastProductCode', () => {
+    it('returns the code of the most recently generated product', async () => {
+      prisma.product.findFirst.mockResolvedValue({ code: 'TS-000041' });
+
+      const result = await repository.getLastProductCode();
+
+      expect(result).toBe('TS-000041');
+    });
+
+    it('returns null when no product exists yet', async () => {
+      prisma.product.findFirst.mockResolvedValue(null);
+
+      const result = await repository.getLastProductCode();
+
+      expect(result).toBeNull();
+    });
+
+    it('does not filter out soft-deleted products, so codes are never reissued', async () => {
+      prisma.product.findFirst.mockResolvedValue({ code: 'TS-000041' });
+
+      await repository.getLastProductCode();
+
+      expect(prisma.product.findFirst).toHaveBeenCalledWith({
+        orderBy: { code: 'desc' },
+        select: { code: true },
+      });
     });
   });
 });

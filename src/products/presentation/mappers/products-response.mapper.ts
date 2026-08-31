@@ -6,6 +6,7 @@ export class ProductsResponseMapper {
     return {
       id: product.id,
       name: product.name,
+      code: product.code,
       description: product.description,
       disabled: product.disabled,
       categoryId: product.categoryId,

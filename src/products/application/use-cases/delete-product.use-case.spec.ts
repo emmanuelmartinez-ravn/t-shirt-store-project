@@ -14,6 +14,7 @@ describe('DeleteProductUseCase', () => {
   const existingProduct = Product.restore({
     id: 'product-id',
     name: 'Classic Tee',
+    code: 'TS-000001',
     description: null,
     disabled: false,
     createdAt: new Date(),
@@ -29,6 +30,7 @@ describe('DeleteProductUseCase', () => {
       updateProduct: jest.fn(),
       deleteProduct: jest.fn(),
       getProductById: jest.fn(),
+      getLastProductCode: jest.fn(),
     };
 
     useCase = new DeleteProductUseCase(productRepository);

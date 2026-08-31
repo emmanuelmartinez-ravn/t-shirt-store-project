@@ -10,4 +10,5 @@ export abstract class ProductRepository {
   abstract updateProduct(product: Product): Promise<Product>;
   abstract deleteProduct(product: Product): Promise<Product>;
   abstract getProductById(id: string): Promise<Product | null>;
+  abstract getLastProductCode(): Promise<string | null>;
 }

@@ -19,6 +19,7 @@ describe('ProductsController', () => {
   const product = Product.restore({
     id: 'product-id',
     name: 'Classic Tee',
+    code: 'TS-000001',
     description: 'A classic cotton t-shirt',
     disabled: false,
     createdAt: new Date(),
