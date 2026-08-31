@@ -6,6 +6,7 @@ import { PoliciesGuard } from '../authorization/guards/policies.guard';
 import { RolesModule } from '../roles/roles.module';
 import { PromoteUserToManagerUseCase } from './application/use-cases/promote-user-to-manager.use-case';
 import { UpdatePasswordUseCase } from './application/use-cases/update-password.use-case';
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case';
 import { UsersController } from './presentation/controllers/users.controller';
 
 @Module({
@@ -14,6 +15,7 @@ import { UsersController } from './presentation/controllers/users.controller';
   providers: [
     PromoteUserToManagerUseCase,
     UpdatePasswordUseCase,
+    UpdateProfileUseCase,
     JwtAuthGuard,
     PoliciesGuard,
   ],

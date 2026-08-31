@@ -53,6 +53,7 @@ describe('PromoteUserToManagerUseCase', () => {
       activateUser: jest.fn(),
       promoteUser: jest.fn(),
       updatePassword: jest.fn(),
+      updateProfile: jest.fn(),
     };
     roleRepository = {
       createRole: jest.fn(),

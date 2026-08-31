@@ -3,12 +3,14 @@ import { User } from '../../../auth/domain/models/user';
 import { UserResponseMapper } from '../../../auth/presentation/mappers/user-response.mapper';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
+import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { UsersController } from './users.controller';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let promoteUserToManagerUseCase: jest.Mocked<PromoteUserToManagerUseCase>;
   let updatePasswordUseCase: jest.Mocked<UpdatePasswordUseCase>;
+  let updateProfileUseCase: jest.Mocked<UpdateProfileUseCase>;
 
   beforeEach(() => {
     promoteUserToManagerUseCase = {
@@ -17,10 +19,14 @@ describe('UsersController', () => {
     updatePasswordUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UpdatePasswordUseCase>;
+    updateProfileUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UpdateProfileUseCase>;
 
     controller = new UsersController(
       promoteUserToManagerUseCase,
       updatePasswordUseCase,
+      updateProfileUseCase,
     );
   });
 
@@ -88,6 +94,44 @@ describe('UsersController', () => {
       expect(updatePasswordUseCase.execute).toHaveBeenCalledWith('user-id', {
         oldPassword: 'OldSecret1!',
         newPassword: 'NewSecret1!',
+      });
+      expect(result).toEqual(UserResponseMapper.toResponse(user));
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('delegates to the use case with the authenticated user id and returns the mapped response', async () => {
+      const user = User.restore({
+        id: 'user-id',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'joe.doe@example.com',
+        hashedPassword: 'hashed',
+        avatar: '',
+        disabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        roleId: 'role-id',
+      });
+      updateProfileUseCase.execute.mockResolvedValue(user);
+      const req = {
+        user: {
+          sub: 'user-id',
+          email: 'joe.doe@example.com',
+          role: 'client',
+          roleId: 'role-id',
+        },
+      } as unknown as Request;
+
+      const result = await controller.updateProfile(req, {
+        firstName: 'Jane',
+        lastName: 'Smith',
+      });
+
+      expect(updateProfileUseCase.execute).toHaveBeenCalledWith('user-id', {
+        firstName: 'Jane',
+        lastName: 'Smith',
       });
       expect(result).toEqual(UserResponseMapper.toResponse(user));
     });

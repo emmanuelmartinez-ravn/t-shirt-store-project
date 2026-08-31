@@ -126,4 +126,23 @@ export class User {
       roleId: user.roleId,
     });
   }
+
+  static updateProfile(
+    user: User,
+    props: { firstName: string; lastName: string },
+  ): User {
+    return new User({
+      id: user.id,
+      firstName: props.firstName,
+      lastName: props.lastName,
+      email: user.email,
+      hashedPassword: user.hashedPassword,
+      avatar: user.avatar,
+      disabled: user.disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: user.deletedAt,
+      roleId: user.roleId,
+    });
+  }
 }

@@ -33,6 +33,7 @@ describe('ForgotPasswordUseCase', () => {
       activateUser: jest.fn(),
       promoteUser: jest.fn(),
       updatePassword: jest.fn(),
+      updateProfile: jest.fn(),
     };
     passwordResetTokenRepository = {
       createToken: jest.fn(),
