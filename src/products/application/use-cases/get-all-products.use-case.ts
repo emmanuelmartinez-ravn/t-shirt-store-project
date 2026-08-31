@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { PaginatedResult } from '../../../common/pagination/paginated-result';
 import { Product } from '../../domain/models/product';
 import { ProductRepository } from '../../infrastructure/repositories/product.repository';
 
@@ -12,11 +13,16 @@ export class GetAllProductsUseCase {
 
   constructor(private readonly productRepository: ProductRepository) {}
 
-  async execute(): Promise<Product[]> {
+  async execute(params: {
+    page: number;
+    limit: number;
+  }): Promise<PaginatedResult<Product>> {
     try {
-      const products = await this.productRepository.getAllProducts();
-      this.logger.log(`Retrieved ${products.length} products`);
-      return products;
+      const result = await this.productRepository.getAllProducts(params);
+      this.logger.log(
+        `Retrieved ${result.items.length} products (page ${params.page})`,
+      );
+      return result;
     } catch (error) {
       this.logger.error('Failed to retrieve products', error);
       throw new InternalServerErrorException({

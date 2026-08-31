@@ -11,6 +11,7 @@ describe('PrismaProductRepository', () => {
     product: {
       create: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
     };
@@ -32,6 +33,7 @@ describe('PrismaProductRepository', () => {
       product: {
         create: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
@@ -93,7 +95,7 @@ describe('PrismaProductRepository', () => {
   });
 
   describe('getAllProducts', () => {
-    it('returns all live products mapped to domain entities', async () => {
+    beforeEach(() => {
       prisma.product.findMany.mockResolvedValue([
         {
           id: product.id,
@@ -106,13 +108,44 @@ describe('PrismaProductRepository', () => {
           categoryId: product.categoryId,
         },
       ]);
+      prisma.product.count.mockResolvedValue(1);
+    });
 
-      const result = await repository.getAllProducts();
+    it('returns the live products mapped to domain entities alongside the total count', async () => {
+      const result = await repository.getAllProducts({ page: 1, limit: 20 });
+
+      expect(result).toEqual({ items: [product], total: 1 });
+    });
+
+    it('filters out soft-deleted products on both findMany and count', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20 });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { deletedAt: null } }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: { deletedAt: null },
+      });
+    });
+
+    it('skips zero records on the first page', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20 });
 
       expect(prisma.product.findMany).toHaveBeenCalledWith({
         where: { deletedAt: null },
+        skip: 0,
+        take: 20,
       });
-      expect(result).toEqual([product]);
+    });
+
+    it('skips the correct number of records on a later page', async () => {
+      await repository.getAllProducts({ page: 2, limit: 10 });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null },
+        skip: 10,
+        take: 10,
+      });
     });
   });
 

@@ -1,3 +1,4 @@
+import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { Product } from '../../domain/models/product';
 import { CreateProductUseCase } from '../../application/use-cases/create-product.use-case';
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
@@ -91,13 +92,22 @@ describe('ProductsController', () => {
   });
 
   describe('getAllProducts', () => {
-    it('delegates to the use case and returns the mapped response', async () => {
-      getAllProductsUseCase.execute.mockResolvedValue([product]);
+    it('delegates to the use case with the query params and returns the mapped paginated response', async () => {
+      getAllProductsUseCase.execute.mockResolvedValue({
+        items: [product],
+        total: 1,
+      });
 
-      const result = await controller.getAllProducts();
+      const result = await controller.getAllProducts({ page: 1, limit: 20 });
 
-      expect(getAllProductsUseCase.execute).toHaveBeenCalled();
-      expect(result).toEqual([ProductsResponseMapper.toResponse(product)]);
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+      });
+      expect(result).toEqual({
+        data: [ProductsResponseMapper.toResponse(product)],
+        pagination: PaginationMapper.buildMeta(1, 20, 1),
+      });
     });
   });
 
