@@ -134,8 +134,8 @@ export class AuthController {
     description: 'Invalid request',
     type: ErrorResponseDto,
     example: {
-      error: 'Validation failed (uuid is expected)',
-      details: [],
+      error: 'Bad Request',
+      details: ['email should not be empty'],
     },
   })
   @ApiNotFoundResponse({
@@ -156,7 +156,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AccountActivationTokenResponseDto> {
     const { token, created } = await this.resendActivationUseCase.execute(
-      dto.userId,
+      dto.email,
     );
     res.status(created ? HttpStatus.CREATED : HttpStatus.OK);
     return AccountActivationTokenResponseMapper.toResponse(token);
