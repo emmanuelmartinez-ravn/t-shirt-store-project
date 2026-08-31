@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EmailQueueService } from '../../../mail/services/email-queue.service';
 import { getAccountActivationTokenTtlMinutes } from '../config/account-activation-token-ttl';
 import { UserNotFoundError } from '../../domain/errors/user-not-found';
 import { AccountActivationToken } from '../../domain/models/account-activation-token';
@@ -22,6 +23,7 @@ export class ResendActivationUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly accountActivationTokenRepository: AccountActivationTokenRepository,
+    private readonly emailQueueService: EmailQueueService,
   ) {}
 
   async execute(userId: string): Promise<ResendActivationResult> {
@@ -39,16 +41,30 @@ export class ResendActivationUseCase {
           now,
         );
 
-      if (existingToken) {
-        return { token: existingToken, created: false };
+      let token = existingToken;
+      let created = false;
+
+      if (!token) {
+        const ttlMinutes = getAccountActivationTokenTtlMinutes();
+        const newToken = AccountActivationToken.create({ userId, ttlMinutes });
+        token =
+          await this.accountActivationTokenRepository.createToken(newToken);
+        created = true;
       }
 
-      const ttlMinutes = getAccountActivationTokenTtlMinutes();
-      const newToken = AccountActivationToken.create({ userId, ttlMinutes });
-      const createdToken =
-        await this.accountActivationTokenRepository.createToken(newToken);
+      try {
+        await this.emailQueueService.enqueueAccountVerificationEmail({
+          to: user.email,
+          token: token.jti,
+        });
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to enqueue verification email for ${user.email}`,
+          emailError,
+        );
+      }
 
-      return { token: createdToken, created: true };
+      return { token, created };
     } catch (error) {
       this.logger.error(
         `Failed to resend activation for user ${userId}`,
