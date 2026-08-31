@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { RoleRepository } from '../../../roles/infrastructure/repositories/role.repository';
+import { EmailQueueService } from '../../../mail/services/email-queue.service';
 import { getAccountActivationTokenTtlMinutes } from '../config/account-activation-token-ttl';
 import { DefaultRoleNotFoundError } from '../../domain/errors/default-role-not-found';
 import { UserAlreadyExistsError } from '../../domain/errors/user-already-exists';
@@ -25,6 +26,7 @@ export class SignUpUseCase {
     private readonly userRepository: UserRepository,
     private readonly accountActivationTokenRepository: AccountActivationTokenRepository,
     private readonly roleRepository: RoleRepository,
+    private readonly emailQueueService: EmailQueueService,
   ) {}
 
   async execute(props: {
@@ -62,6 +64,18 @@ export class SignUpUseCase {
         ttlMinutes,
       });
       await this.accountActivationTokenRepository.createToken(activationToken);
+
+      try {
+        await this.emailQueueService.enqueueAccountVerificationEmail({
+          to: createdUser.email,
+          token: activationToken.jti,
+        });
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to enqueue verification email for ${createdUser.email}`,
+          emailError,
+        );
+      }
 
       this.logger.log(`Signed up user ${createdUser.email}`);
       return createdUser;

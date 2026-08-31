@@ -2,6 +2,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { EmailQueueService } from '../../../mail/services/email-queue.service';
 import { AccountActivationToken } from '../../domain/models/account-activation-token';
 import { User } from '../../domain/models/user';
 import { AccountActivationTokenRepository } from '../../infrastructure/repositories/account-activation-token.repository';
@@ -12,6 +13,7 @@ describe('ResendActivationUseCase', () => {
   let useCase: ResendActivationUseCase;
   let userRepository: jest.Mocked<UserRepository>;
   let accountActivationTokenRepository: jest.Mocked<AccountActivationTokenRepository>;
+  let emailQueueService: jest.Mocked<EmailQueueService>;
 
   const user = User.restore({
     id: 'user-id',
@@ -41,10 +43,14 @@ describe('ResendActivationUseCase', () => {
       consumeToken: jest.fn(),
       getValidTokenByUserId: jest.fn(),
     };
+    emailQueueService = {
+      enqueueAccountVerificationEmail: jest.fn(),
+    };
 
     useCase = new ResendActivationUseCase(
       userRepository,
       accountActivationTokenRepository,
+      emailQueueService,
     );
   });
 
@@ -71,6 +77,9 @@ describe('ResendActivationUseCase', () => {
 
     expect(result).toEqual({ token: existingToken, created: false });
     expect(accountActivationTokenRepository.createToken).not.toHaveBeenCalled();
+    expect(
+      emailQueueService.enqueueAccountVerificationEmail,
+    ).toHaveBeenCalledWith({ to: user.email, token: existingToken.jti });
   });
 
   it('creates a new token when none are valid', async () => {
@@ -89,6 +98,32 @@ describe('ResendActivationUseCase', () => {
     expect(createdTokenArg.userId).toBe(user.id);
     expect(createdTokenArg.expiresAt.getTime()).toBeGreaterThan(Date.now());
     expect(result).toEqual({ token: createdTokenArg, created: true });
+    expect(
+      emailQueueService.enqueueAccountVerificationEmail,
+    ).toHaveBeenCalledWith({ to: user.email, token: createdTokenArg.jti });
+  });
+
+  it('still returns the token when enqueuing the verification email fails', async () => {
+    userRepository.getUserById.mockResolvedValue(user);
+    const existingToken = AccountActivationToken.restore({
+      id: 'token-id',
+      jti: 'jti-value',
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      userId: user.id,
+    });
+    accountActivationTokenRepository.getValidTokenByUserId.mockResolvedValue(
+      existingToken,
+    );
+    emailQueueService.enqueueAccountVerificationEmail.mockRejectedValue(
+      new Error('queue unavailable'),
+    );
+
+    const result = await useCase.execute(user.id);
+
+    expect(result).toEqual({ token: existingToken, created: false });
   });
 
   it('translates a missing user into a NotFoundException', async () => {
