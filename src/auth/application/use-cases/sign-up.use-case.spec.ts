@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { Role } from '../../../roles/domain/models/role';
 import { RoleRepository } from '../../../roles/infrastructure/repositories/role.repository';
+import { EmailQueueService } from '../../../mail/services/email-queue.service';
 import { UserAlreadyExistsError } from '../../domain/errors/user-already-exists';
 import { User } from '../../domain/models/user';
 import { AccountActivationTokenRepository } from '../../infrastructure/repositories/account-activation-token.repository';
@@ -15,6 +16,7 @@ describe('SignUpUseCase', () => {
   let userRepository: jest.Mocked<UserRepository>;
   let accountActivationTokenRepository: jest.Mocked<AccountActivationTokenRepository>;
   let roleRepository: jest.Mocked<RoleRepository>;
+  let emailQueueService: jest.Mocked<EmailQueueService>;
 
   const role = Role.restore({
     id: 'role-id',
@@ -53,11 +55,15 @@ describe('SignUpUseCase', () => {
       updateRole: jest.fn(),
       deleteRole: jest.fn(),
     };
+    emailQueueService = {
+      enqueueAccountVerificationEmail: jest.fn(),
+    };
 
     useCase = new SignUpUseCase(
       userRepository,
       accountActivationTokenRepository,
       roleRepository,
+      emailQueueService,
     );
   });
 
@@ -98,6 +104,37 @@ describe('SignUpUseCase', () => {
       accountActivationTokenRepository.createToken.mock.calls[0];
     expect(tokenArg.userId).toBe(createdUser.id);
     expect(tokenArg.expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+    expect(
+      emailQueueService.enqueueAccountVerificationEmail,
+    ).toHaveBeenCalledWith({ to: createdUser.email, token: tokenArg.jti });
+    expect(result).toBe(createdUser);
+  });
+
+  it('still returns the created user when enqueuing the verification email fails', async () => {
+    roleRepository.getRoleByName.mockResolvedValue(role);
+    const createdUser = User.restore({
+      id: 'user-id',
+      firstName: 'Joe',
+      lastName: 'Doe',
+      email: 'joe.doe@example.com',
+      hashedPassword: 'hashed',
+      avatar: '',
+      disabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      roleId: role.id,
+    });
+    userRepository.createUser.mockResolvedValue(createdUser);
+    accountActivationTokenRepository.createToken.mockImplementation((token) =>
+      Promise.resolve(token),
+    );
+    emailQueueService.enqueueAccountVerificationEmail.mockRejectedValue(
+      new Error('queue unavailable'),
+    );
+
+    const result = await useCase.execute(signUpProps);
 
     expect(result).toBe(createdUser);
   });
