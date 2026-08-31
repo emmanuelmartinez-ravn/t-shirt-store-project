@@ -5,6 +5,7 @@ import { AccountActivationToken } from '../../../domain/models/account-activatio
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
+import { SignOutUseCase } from '../../../application/use-cases/sign-out.use-case';
 import { SignUpUseCase } from '../../../application/use-cases/sign-up.use-case';
 import { VerifyAccountUseCase } from '../../../application/use-cases/verify-account.use-case';
 import { AccountActivationTokenResponseMapper } from '../../mappers/account-activation-token-response.mapper';
@@ -18,6 +19,7 @@ describe('AuthController', () => {
   let resendActivationUseCase: jest.Mocked<ResendActivationUseCase>;
   let signInUseCase: jest.Mocked<SignInUseCase>;
   let refreshUseCase: jest.Mocked<RefreshUseCase>;
+  let signOutUseCase: jest.Mocked<SignOutUseCase>;
 
   beforeEach(() => {
     signUpUseCase = {
@@ -35,6 +37,9 @@ describe('AuthController', () => {
     refreshUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<RefreshUseCase>;
+    signOutUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<SignOutUseCase>;
 
     controller = new AuthController(
       signUpUseCase,
@@ -42,6 +47,7 @@ describe('AuthController', () => {
       resendActivationUseCase,
       signInUseCase,
       refreshUseCase,
+      signOutUseCase,
     );
   });
 
@@ -184,6 +190,16 @@ describe('AuthController', () => {
 
       expect(refreshUseCase.execute).toHaveBeenCalledWith('old-refresh');
       expect(result).toBe(tokens);
+    });
+  });
+
+  describe('signOut', () => {
+    it('delegates to the use case', async () => {
+      signOutUseCase.execute.mockResolvedValue(undefined);
+
+      await controller.signOut({ refreshToken: 'old-refresh' });
+
+      expect(signOutUseCase.execute).toHaveBeenCalledWith('old-refresh');
     });
   });
 });

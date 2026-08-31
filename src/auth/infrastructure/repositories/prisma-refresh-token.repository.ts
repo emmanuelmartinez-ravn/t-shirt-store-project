@@ -16,7 +16,6 @@ export class PrismaRefreshTokenRepository extends RefreshTokenRepository {
         id: token.id,
         jti: token.jti,
         expiresAt: token.expiresAt,
-        revokedAt: token.revokedAt,
         createdAt: token.createdAt,
         updatedAt: token.updatedAt,
         userId: token.userId,
@@ -38,7 +37,7 @@ export class PrismaRefreshTokenRepository extends RefreshTokenRepository {
     const record = await this.prisma.refreshToken.update({
       where: { id: token.id },
       data: {
-        revokedAt: token.revokedAt,
+        deletedAt: token.deletedAt,
         updatedAt: token.updatedAt,
       },
     });

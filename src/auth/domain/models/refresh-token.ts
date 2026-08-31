@@ -6,7 +6,6 @@ export class RefreshToken {
   readonly id: string;
   readonly jti: string;
   readonly expiresAt: Date;
-  revokedAt: Date | null;
   readonly createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -16,7 +15,6 @@ export class RefreshToken {
     id: string;
     jti: string;
     expiresAt: Date;
-    revokedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
@@ -25,7 +23,6 @@ export class RefreshToken {
     this.id = props.id;
     this.jti = props.jti;
     this.expiresAt = props.expiresAt;
-    this.revokedAt = props.revokedAt;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;
@@ -41,7 +38,6 @@ export class RefreshToken {
       expiresAt: new Date(
         now.getTime() + props.ttlMinutes * MILLISECONDS_PER_MINUTE,
       ),
-      revokedAt: null,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -53,7 +49,6 @@ export class RefreshToken {
     id: string;
     jti: string;
     expiresAt: Date;
-    revokedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
@@ -67,10 +62,9 @@ export class RefreshToken {
       id: token.id,
       jti: token.jti,
       expiresAt: token.expiresAt,
-      revokedAt: new Date(),
       createdAt: token.createdAt,
       updatedAt: new Date(),
-      deletedAt: token.deletedAt,
+      deletedAt: new Date(),
       userId: token.userId,
     });
   }
@@ -80,6 +74,6 @@ export class RefreshToken {
   }
 
   isRevoked(): boolean {
-    return this.revokedAt !== null;
+    return this.deletedAt !== null;
   }
 }
