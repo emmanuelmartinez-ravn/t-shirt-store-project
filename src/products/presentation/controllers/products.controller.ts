@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -27,6 +28,10 @@ import { Action } from '../../../authorization/ability/action.enum';
 import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
 import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../../../authorization/guards/policies.guard';
+import { ApiPaginatedResponse } from '../../../common/pagination/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../../../common/pagination/dto/pagination-query.dto';
+import { PaginatedResponse } from '../../../common/pagination/paginated-response';
+import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { CreateProductUseCase } from '../../application/use-cases/create-product.use-case';
@@ -133,21 +138,26 @@ export class ProductsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all products' })
-  @ApiOkResponse({
-    description: 'All live (non-deleted) products',
-    type: ProductResponseDto,
-    isArray: true,
-  })
+  @ApiPaginatedResponse(
+    ProductResponseDto,
+    'Paginated list of live (non-deleted) products',
+  )
   @ApiInternalServerErrorResponse({
     description: 'Unexpected server error',
     type: ErrorResponseDto,
     examples: { InternalServerError: internalServerErrorExample },
   })
-  public async getAllProducts(): Promise<ProductResponseDto[]> {
-    const products = await this.getAllProductsUseCase.execute();
-    return products.map((product) =>
-      ProductsResponseMapper.toResponse(product),
-    );
+  public async getAllProducts(
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<ProductResponseDto>> {
+    const { items, total } = await this.getAllProductsUseCase.execute({
+      page: query.page,
+      limit: query.limit,
+    });
+    return {
+      data: items.map((product) => ProductsResponseMapper.toResponse(product)),
+      pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
+    };
   }
 
   @Get(':id')

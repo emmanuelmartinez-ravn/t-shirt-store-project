@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../generated/prisma/client';
+import { PaginatedResult } from '../../../common/pagination/paginated-result';
 import { PrismaService } from '../../../prisma/services/prisma.service';
 import { ProductAlreadyExistsError } from '../../domain/errors/product-already-exists';
 import { ProductNotFoundError } from '../../domain/errors/product-not-found';
@@ -42,12 +43,28 @@ export class PrismaProductRepository extends ProductRepository {
     }
   }
 
-  async getAllProducts(): Promise<Product[]> {
-    const records = await this.prisma.product.findMany({
-      where: { deletedAt: null },
-    });
+  async getAllProducts(params: {
+    page: number;
+    limit: number;
+  }): Promise<PaginatedResult<Product>> {
+    const { page, limit } = params;
+    const skip = (page - 1) * limit;
 
-    return records.map((record) => ProductsPersistenceMapper.toDomain(record));
+    const [records, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { deletedAt: null },
+        skip,
+        take: limit,
+      }),
+      this.prisma.product.count({ where: { deletedAt: null } }),
+    ]);
+
+    return {
+      items: records.map((record) =>
+        ProductsPersistenceMapper.toDomain(record),
+      ),
+      total,
+    };
   }
 
   async updateProduct(product: Product): Promise<Product> {
