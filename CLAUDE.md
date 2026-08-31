@@ -44,6 +44,7 @@ A husky `pre-commit` hook runs `pnpm lint` and `pnpm test` — keep both green b
 
 - If you start `pnpm start:dev` (or any process that binds port 3000) to verify a change, kill it — and any leftover process still holding port 3000 — once you're done checking, instead of leaving it running in the background.
 - Don't read files under `generated/` (e.g. `generated/prisma/models/*.ts`, `generated/prisma/client.ts`) — they're auto-generated and can run to thousands of lines, burning context for little value. Look up the actual field names/types from `prisma/schema.prisma` instead; only read a `generated/` file if you specifically need to confirm an exported type name Prisma produces (e.g. `RoleModel`), and prefer `Grep` over `Read` even then.
+- **Delegate backend implementation and test-writing to the `backend-engineer` and `test-engineer` subagents (`.claude/agents/`) instead of doing them yourself directly.** For any task that adds or modifies backend code (use-cases, controllers, repositories, DTOs, domain models, Prisma schema), spawn `backend-engineer` via the Agent tool to do the implementation; once it reports back what it built, spawn `test-engineer` to write/update the corresponding `*.spec.ts` files. Brief each agent with the same context you'd need to do the work yourself — file paths, what changed, why — since each starts fresh with no memory of this conversation. Skip delegation only for trivial one-line tweaks, pure investigation/debugging, or non-code changes (docs, config, `.claude/` files) — those aren't worth the round-trip.
 
 ## Additional references
 
@@ -53,7 +54,7 @@ This file is the canonical, always-loaded overview. Deeper reference docs live u
 - `.claude/rules/code-style.md` — formatting/lint specifics, naming conventions, Nest-specific patterns.
 - `.claude/rules/testing.md` — exactly how each layer is unit-tested (use-cases, controllers, repositories, filters), with the conventions every existing spec follows.
 - `.claude/commands/commit.md` (`/commit`) and `.claude/commands/pr.md` (`/pr`) — this repo's commit/PR workflow; prefer these over ad hoc git commands.
-- `.claude/agents/backend-engineer.md` and `.claude/agents/test-engineer.md` — paired subagents for feature work: backend-engineer implements (use-cases, controllers, repositories, Prisma schema) but never touches `*.spec.ts`; test-engineer covers what it built per `.claude/rules/testing.md` and reports implementation gaps back instead of working around them.
+- `.claude/agents/backend-engineer.md` and `.claude/agents/test-engineer.md` — paired subagents for feature work (see "Agent workflow notes" above for when to use them): backend-engineer implements (use-cases, controllers, repositories, Prisma schema) but never touches `*.spec.ts`; test-engineer covers what it built per `.claude/rules/testing.md` and reports implementation gaps back instead of working around them.
 - `prisma-cli` / `prisma-client-api` skills — detailed Prisma command/query reference (see Commands above).
 
 ## Architecture
