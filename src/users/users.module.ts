@@ -5,11 +5,17 @@ import { JwtAuthGuard } from '../authorization/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../authorization/guards/policies.guard';
 import { RolesModule } from '../roles/roles.module';
 import { PromoteUserToManagerUseCase } from './application/use-cases/promote-user-to-manager.use-case';
+import { UpdatePasswordUseCase } from './application/use-cases/update-password.use-case';
 import { UsersController } from './presentation/controllers/users.controller';
 
 @Module({
   imports: [AuthModule, RolesModule, AuthorizationModule],
   controllers: [UsersController],
-  providers: [PromoteUserToManagerUseCase, JwtAuthGuard, PoliciesGuard],
+  providers: [
+    PromoteUserToManagerUseCase,
+    UpdatePasswordUseCase,
+    JwtAuthGuard,
+    PoliciesGuard,
+  ],
 })
 export class UsersModule {}

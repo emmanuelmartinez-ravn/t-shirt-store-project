@@ -1,10 +1,13 @@
 import {
+  Body,
   Controller,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,6 +22,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { Action } from '../../../authorization/ability/action.enum';
 import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
 import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
@@ -28,6 +32,8 @@ import { UserResponseMapper } from '../../../auth/presentation/mappers/user-resp
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
+import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
+import { UpdatePasswordDto } from '../dto/update-password';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -45,6 +51,7 @@ import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote
 export class UsersController {
   constructor(
     private readonly promoteUserToManagerUseCase: PromoteUserToManagerUseCase,
+    private readonly updatePasswordUseCase: UpdatePasswordUseCase,
   ) {}
 
   @Post(':id/promotion')
@@ -120,6 +127,76 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
     const user = await this.promoteUserToManagerUseCase.execute(id);
+    return UserResponseMapper.toResponse(user);
+  }
+
+  @Patch('password')
+  @HttpCode(HttpStatus.OK)
+  @CheckPolicies(() => true)
+  @ApiOperation({ summary: "Change the authenticated user's password" })
+  @ApiOkResponse({
+    description: 'Updated user',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request, or the old password is incorrect',
+    type: ErrorResponseDto,
+    examples: {
+      WeakPassword: {
+        summary: 'newPassword does not meet complexity requirements',
+        value: {
+          error: 'Bad Request',
+          details: [
+            'newPassword must be at least 8 characters long',
+            'newPassword must contain at least one uppercase letter',
+          ],
+        },
+      },
+      ConfirmMismatch: {
+        summary: 'confirmPassword does not match newPassword',
+        value: {
+          error: 'Bad Request',
+          details: ['confirmPassword must match newPassword'],
+        },
+      },
+      IncorrectOldPassword: {
+        summary: 'oldPassword does not match the current password',
+        value: {
+          error: 'Old password is incorrect',
+          details: [],
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user is disabled',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User is disabled',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async updatePassword(
+    @Req() req: Request,
+    @Body() dto: UpdatePasswordDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.updatePasswordUseCase.execute(req.user!.sub, {
+      oldPassword: dto.oldPassword,
+      newPassword: dto.newPassword,
+    });
     return UserResponseMapper.toResponse(user);
   }
 }

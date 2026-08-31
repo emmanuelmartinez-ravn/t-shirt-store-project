@@ -6,4 +6,5 @@ export abstract class UserRepository {
   abstract getUserByEmail(email: string): Promise<User | null>;
   abstract activateUser(user: User): Promise<User>;
   abstract promoteUser(user: User): Promise<User>;
+  abstract updatePassword(user: User): Promise<User>;
 }
