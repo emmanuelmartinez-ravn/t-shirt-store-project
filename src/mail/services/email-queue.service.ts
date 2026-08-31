@@ -3,4 +3,8 @@ export abstract class EmailQueueService {
     to: string;
     token: string;
   }): Promise<void>;
+  abstract enqueuePasswordResetEmail(params: {
+    to: string;
+    token: string;
+  }): Promise<void>;
 }

@@ -2,6 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { User } from '../../../domain/models/user';
 import { AccountActivationToken } from '../../../domain/models/account-activation-token';
+import { ForgotPasswordUseCase } from '../../../application/use-cases/forgot-password.use-case';
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
@@ -20,6 +21,7 @@ describe('AuthController', () => {
   let signInUseCase: jest.Mocked<SignInUseCase>;
   let refreshUseCase: jest.Mocked<RefreshUseCase>;
   let signOutUseCase: jest.Mocked<SignOutUseCase>;
+  let forgotPasswordUseCase: jest.Mocked<ForgotPasswordUseCase>;
 
   beforeEach(() => {
     signUpUseCase = {
@@ -40,6 +42,9 @@ describe('AuthController', () => {
     signOutUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<SignOutUseCase>;
+    forgotPasswordUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<ForgotPasswordUseCase>;
 
     controller = new AuthController(
       signUpUseCase,
@@ -48,6 +53,7 @@ describe('AuthController', () => {
       signInUseCase,
       refreshUseCase,
       signOutUseCase,
+      forgotPasswordUseCase,
     );
   });
 
@@ -200,6 +206,21 @@ describe('AuthController', () => {
       await controller.signOut({ refreshToken: 'old-refresh' });
 
       expect(signOutUseCase.execute).toHaveBeenCalledWith('old-refresh');
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('delegates to the use case and returns nothing', async () => {
+      forgotPasswordUseCase.execute.mockResolvedValue(undefined);
+
+      const result = await controller.forgotPassword({
+        email: 'joe.doe@example.com',
+      });
+
+      expect(forgotPasswordUseCase.execute).toHaveBeenCalledWith(
+        'joe.doe@example.com',
+      );
+      expect(result).toBeUndefined();
     });
   });
 });

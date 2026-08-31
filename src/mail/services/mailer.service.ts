@@ -21,4 +21,15 @@ export class MailerService {
 
     this.logger.log(`Sent account verification email to ${to}`);
   }
+
+  async sendPasswordResetEmail(to: string, link: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: getMailFromAddress(),
+      to,
+      subject: 'Reset your password',
+      html: `<p>Click the link below to reset your password:</p><p><a href="${link}">${link}</a></p>`,
+    });
+
+    this.logger.log(`Sent password reset email to ${to}`);
+  }
 }

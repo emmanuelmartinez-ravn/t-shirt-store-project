@@ -23,6 +23,7 @@ import {
 import type { Response } from 'express';
 import { ErrorResponseDto } from '../../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../../exceptions/dto/error-response.example';
+import { ForgotPasswordUseCase } from '../../../application/use-cases/forgot-password.use-case';
 import { RefreshUseCase } from '../../../application/use-cases/refresh.use-case';
 import { ResendActivationUseCase } from '../../../application/use-cases/resend-activation.use-case';
 import { SignInUseCase } from '../../../application/use-cases/sign-in.use-case';
@@ -31,6 +32,7 @@ import { SignUpUseCase } from '../../../application/use-cases/sign-up.use-case';
 import { VerifyAccountUseCase } from '../../../application/use-cases/verify-account.use-case';
 import { AccountActivationTokenResponseDto } from '../../dto/account-activation-token-response';
 import { AuthTokensResponseDto } from '../../dto/auth-tokens-response';
+import { ForgotPasswordDto } from '../../dto/forgot-password';
 import { RefreshDto } from '../../dto/refresh';
 import { ResendActivationDto } from '../../dto/resend-activation';
 import { SignInDto } from '../../dto/sign-in';
@@ -51,6 +53,7 @@ export class AuthController {
     private readonly signInUseCase: SignInUseCase,
     private readonly refreshUseCase: RefreshUseCase,
     private readonly signOutUseCase: SignOutUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
   ) {}
 
   @Post('sign-up')
@@ -270,5 +273,28 @@ export class AuthController {
   })
   public async signOut(@Body() dto: SignOutDto): Promise<void> {
     await this.signOutUseCase.execute(dto.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiNoContentResponse({
+    description: 'A password reset email was sent if the account exists',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Bad Request',
+      details: ['email should not be empty'],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    await this.forgotPasswordUseCase.execute(dto.email);
   }
 }

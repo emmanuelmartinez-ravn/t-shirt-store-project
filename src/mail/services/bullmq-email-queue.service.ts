@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import {
   EMAIL_QUEUE_NAME,
+  SEND_PASSWORD_RESET_EMAIL_JOB,
   SEND_VERIFICATION_EMAIL_JOB,
 } from '../mail.constants';
 import { EmailQueueService } from './email-queue.service';
@@ -23,6 +24,16 @@ export class BullMqEmailQueueService extends EmailQueueService {
     token: string;
   }): Promise<void> {
     await this.emailQueue.add(SEND_VERIFICATION_EMAIL_JOB, params, {
+      attempts: JOB_ATTEMPTS,
+      backoff: { type: 'exponential', delay: JOB_BACKOFF_DELAY_MS },
+    });
+  }
+
+  async enqueuePasswordResetEmail(params: {
+    to: string;
+    token: string;
+  }): Promise<void> {
+    await this.emailQueue.add(SEND_PASSWORD_RESET_EMAIL_JOB, params, {
       attempts: JOB_ATTEMPTS,
       backoff: { type: 'exponential', delay: JOB_BACKOFF_DELAY_MS },
     });

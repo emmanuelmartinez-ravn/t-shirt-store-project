@@ -29,4 +29,20 @@ describe('MailerService', () => {
       expect(mailOptions.html).toContain('frontend.com/activation/jti-value');
     });
   });
+
+  describe('sendPasswordResetEmail', () => {
+    it('sends an email containing the reset link to the given address', async () => {
+      await service.sendPasswordResetEmail(
+        'joe.doe@example.com',
+        'frontend.com/reset-password/jti-value',
+      );
+
+      const [mailOptions] = transporter.sendMail.mock.calls[0];
+      expect(mailOptions.to).toBe('joe.doe@example.com');
+      expect(mailOptions.subject).toBe('Reset your password');
+      expect(mailOptions.html).toContain(
+        'frontend.com/reset-password/jti-value',
+      );
+    });
+  });
 });
