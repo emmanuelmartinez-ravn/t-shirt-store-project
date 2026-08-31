@@ -53,6 +53,7 @@ This file is the canonical, always-loaded overview. Deeper reference docs live u
 - `.claude/rules/code-style.md` — formatting/lint specifics, naming conventions, Nest-specific patterns.
 - `.claude/rules/testing.md` — exactly how each layer is unit-tested (use-cases, controllers, repositories, filters), with the conventions every existing spec follows.
 - `.claude/commands/commit.md` (`/commit`) and `.claude/commands/pr.md` (`/pr`) — this repo's commit/PR workflow; prefer these over ad hoc git commands.
+- `.claude/agents/backend-engineer.md` and `.claude/agents/test-engineer.md` — paired subagents for feature work: backend-engineer implements (use-cases, controllers, repositories, Prisma schema) but never touches `*.spec.ts`; test-engineer covers what it built per `.claude/rules/testing.md` and reports implementation gaps back instead of working around them.
 - `prisma-cli` / `prisma-client-api` skills — detailed Prisma command/query reference (see Commands above).
 
 ## Architecture
