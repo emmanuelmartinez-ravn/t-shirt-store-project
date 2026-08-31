@@ -62,7 +62,7 @@ export function IsStrongPassword(): PropertyDecorator {
     }),
     Matches(new RegExp(`[${PASSWORD_SYMBOLS_PATTERN}]`), {
       message: (args: ValidationArguments) =>
-        `${args.property} must contain at least one symbol (${PASSWORD_SYMBOLS.join(' ')})`,
+        `${args.property} must contain at least one symbol`,
     }),
   );
 }
