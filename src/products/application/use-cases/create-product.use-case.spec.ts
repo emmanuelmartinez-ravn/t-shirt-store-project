@@ -30,6 +30,7 @@ describe('CreateProductUseCase', () => {
       updateProduct: jest.fn(),
       deleteProduct: jest.fn(),
       getProductById: jest.fn(),
+      getLastProductCode: jest.fn(),
     };
     categoryRepository = {
       createCategory: jest.fn(),
@@ -50,6 +51,7 @@ describe('CreateProductUseCase', () => {
     const persistedProduct = Product.restore({
       id: 'product-id',
       name: 'Classic Tee',
+      code: 'TS-000006',
       description: 'A classic cotton t-shirt',
       disabled: false,
       createdAt: new Date(),
@@ -58,6 +60,7 @@ describe('CreateProductUseCase', () => {
       categoryId: 'category-id',
     });
     categoryRepository.getCategoryById.mockResolvedValue(category);
+    productRepository.getLastProductCode.mockResolvedValue('TS-000005');
     productRepository.createProduct.mockResolvedValue(persistedProduct);
 
     const result = await useCase.execute({
@@ -69,11 +72,39 @@ describe('CreateProductUseCase', () => {
     expect(productRepository.createProduct).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Classic Tee',
+        code: 'TS-000006',
         description: 'A classic cotton t-shirt',
         categoryId: 'category-id',
       }),
     );
     expect(result).toBe(persistedProduct);
+  });
+
+  it('generates the first code when there is no previous product', async () => {
+    const persistedProduct = Product.restore({
+      id: 'product-id',
+      name: 'Classic Tee',
+      code: 'TS-000001',
+      description: 'A classic cotton t-shirt',
+      disabled: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      categoryId: 'category-id',
+    });
+    categoryRepository.getCategoryById.mockResolvedValue(category);
+    productRepository.getLastProductCode.mockResolvedValue(null);
+    productRepository.createProduct.mockResolvedValue(persistedProduct);
+
+    await useCase.execute({
+      name: 'Classic Tee',
+      description: 'A classic cotton t-shirt',
+      categoryId: 'category-id',
+    });
+
+    expect(productRepository.createProduct).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'TS-000001' }),
+    );
   });
 
   it('translates a missing category into a NotFoundException', async () => {
@@ -86,6 +117,7 @@ describe('CreateProductUseCase', () => {
         categoryId: 'category-id',
       }),
     ).rejects.toThrow(NotFoundException);
+    expect(productRepository.getLastProductCode).not.toHaveBeenCalled();
     expect(productRepository.createProduct).not.toHaveBeenCalled();
   });
 
@@ -103,11 +135,13 @@ describe('CreateProductUseCase', () => {
         categoryId: 'category-id',
       }),
     ).rejects.toThrow(NotFoundException);
+    expect(productRepository.getLastProductCode).not.toHaveBeenCalled();
     expect(productRepository.createProduct).not.toHaveBeenCalled();
   });
 
   it('translates ProductAlreadyExistsError into a ConflictException', async () => {
     categoryRepository.getCategoryById.mockResolvedValue(category);
+    productRepository.getLastProductCode.mockResolvedValue('TS-000005');
     productRepository.createProduct.mockRejectedValue(
       new ProductAlreadyExistsError('Classic Tee'),
     );
@@ -121,8 +155,25 @@ describe('CreateProductUseCase', () => {
     ).rejects.toThrow(ConflictException);
   });
 
+  it('translates an unexpected getLastProductCode failure into an InternalServerErrorException', async () => {
+    categoryRepository.getCategoryById.mockResolvedValue(category);
+    productRepository.getLastProductCode.mockRejectedValue(
+      new Error('connection lost'),
+    );
+
+    await expect(
+      useCase.execute({
+        name: 'Classic Tee',
+        description: null,
+        categoryId: 'category-id',
+      }),
+    ).rejects.toThrow(InternalServerErrorException);
+    expect(productRepository.createProduct).not.toHaveBeenCalled();
+  });
+
   it('translates unexpected errors into an InternalServerErrorException', async () => {
     categoryRepository.getCategoryById.mockResolvedValue(category);
+    productRepository.getLastProductCode.mockResolvedValue('TS-000005');
     productRepository.createProduct.mockRejectedValue(
       new Error('connection lost'),
     );

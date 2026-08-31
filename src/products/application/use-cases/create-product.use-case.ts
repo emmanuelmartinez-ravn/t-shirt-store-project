@@ -34,7 +34,9 @@ export class CreateProductUseCase {
         throw new ProductCategoryNotFoundError(props.categoryId);
       }
 
-      const product = Product.create(props);
+      const lastCode = await this.productRepository.getLastProductCode();
+      const code = Product.generateNextCode(lastCode);
+      const product = Product.create({ ...props, code });
       const createdProduct =
         await this.productRepository.createProduct(product);
       this.logger.log(`Created product ${createdProduct.name}`);

@@ -6,6 +6,7 @@ export class ProductsPersistenceMapper {
     return new Product({
       id: record.id,
       name: record.name,
+      code: record.code,
       description: record.description,
       disabled: record.disabled,
       createdAt: record.createdAt,

@@ -14,6 +14,12 @@ export class ProductResponseDto {
   name!: string;
 
   @ApiProperty({
+    description: 'Auto-generated, unique product code',
+    example: 'TS-000001',
+  })
+  code!: string;
+
+  @ApiProperty({
     description: 'Description of the product, if provided',
     example: 'A classic cotton t-shirt',
     nullable: true,

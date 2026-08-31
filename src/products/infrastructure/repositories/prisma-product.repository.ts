@@ -23,6 +23,7 @@ export class PrismaProductRepository extends ProductRepository {
         data: {
           id: product.id,
           name: product.name,
+          code: product.code,
           description: product.description,
           disabled: product.disabled,
           createdAt: product.createdAt,
@@ -37,7 +38,10 @@ export class PrismaProductRepository extends ProductRepository {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === UNIQUE_CONSTRAINT_VIOLATION
       ) {
-        throw new ProductAlreadyExistsError(product.name);
+        const target = error.meta?.target;
+        if (Array.isArray(target) && target.includes('name')) {
+          throw new ProductAlreadyExistsError(product.name);
+        }
       }
       throw error;
     }
@@ -119,5 +123,13 @@ export class PrismaProductRepository extends ProductRepository {
     const record = await this.prisma.product.findUnique({ where: { id } });
 
     return record ? ProductsPersistenceMapper.toDomain(record) : null;
+  }
+
+  async getLastProductCode(): Promise<string | null> {
+    const record = await this.prisma.product.findFirst({
+      orderBy: { code: 'desc' },
+      select: { code: true },
+    });
+    return record?.code ?? null;
   }
 }

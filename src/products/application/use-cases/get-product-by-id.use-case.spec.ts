@@ -17,6 +17,7 @@ describe('GetProductByIdUseCase', () => {
       updateProduct: jest.fn(),
       deleteProduct: jest.fn(),
       getProductById: jest.fn(),
+      getLastProductCode: jest.fn(),
     };
 
     useCase = new GetProductByIdUseCase(productRepository);
@@ -30,6 +31,7 @@ describe('GetProductByIdUseCase', () => {
     const product = Product.restore({
       id: 'product-id',
       name: 'Classic Tee',
+      code: 'TS-000001',
       description: null,
       disabled: false,
       createdAt: new Date(),
@@ -57,6 +59,7 @@ describe('GetProductByIdUseCase', () => {
     const deletedProduct = Product.restore({
       id: 'product-id',
       name: 'Classic Tee',
+      code: 'TS-000001',
       description: null,
       disabled: false,
       createdAt: new Date(),

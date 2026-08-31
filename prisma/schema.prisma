@@ -116,6 +116,7 @@ model Category {
 model Product {
   id          String    @id @default(uuid())
   name        String
+  code        String    @unique @map("code")
   description String?   @map("description")
   disabled    Boolean   @default(false) @map("disabled")
   createdAt   DateTime  @default(now()) @map("created_at")

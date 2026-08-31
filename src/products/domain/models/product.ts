@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
+const PRODUCT_CODE_PREFIX = 'TS-';
+const PRODUCT_CODE_NUMBER_LENGTH = 6;
+
 export class Product {
   readonly id: string;
   name: string;
+  readonly code: string;
   description: string | null;
   disabled: boolean;
   readonly createdAt: Date;
@@ -13,6 +17,7 @@ export class Product {
   constructor(props: {
     id: string;
     name: string;
+    code: string;
     description: string | null;
     disabled: boolean;
     createdAt: Date;
@@ -22,6 +27,7 @@ export class Product {
   }) {
     this.id = props.id;
     this.name = props.name;
+    this.code = props.code;
     this.description = props.description;
     this.disabled = props.disabled;
     this.createdAt = props.createdAt;
@@ -32,6 +38,7 @@ export class Product {
 
   static create(props: {
     name: string;
+    code: string;
     description: string | null;
     categoryId: string;
   }): Product {
@@ -40,6 +47,7 @@ export class Product {
     return new Product({
       id: randomUUID(),
       name: props.name,
+      code: props.code,
       description: props.description,
       disabled: false,
       createdAt: now,
@@ -58,6 +66,7 @@ export class Product {
     return new Product({
       id: product.id,
       name: props.name,
+      code: product.code,
       description: props.description,
       disabled: product.disabled,
       createdAt: product.createdAt,
@@ -73,6 +82,7 @@ export class Product {
     return new Product({
       id: product.id,
       name: product.name,
+      code: product.code,
       description: product.description,
       disabled: product.disabled,
       createdAt: product.createdAt,
@@ -85,6 +95,7 @@ export class Product {
   static restore(props: {
     id: string;
     name: string;
+    code: string;
     description: string | null;
     disabled: boolean;
     createdAt: Date;
@@ -93,5 +104,13 @@ export class Product {
     categoryId: string;
   }): Product {
     return new Product(props);
+  }
+
+  static generateNextCode(lastCode: string | null): string {
+    const lastNumber = lastCode
+      ? Number(lastCode.slice(PRODUCT_CODE_PREFIX.length))
+      : 0;
+    const nextNumber = lastNumber + 1;
+    return `${PRODUCT_CODE_PREFIX}${String(nextNumber).padStart(PRODUCT_CODE_NUMBER_LENGTH, '0')}`;
   }
 }
