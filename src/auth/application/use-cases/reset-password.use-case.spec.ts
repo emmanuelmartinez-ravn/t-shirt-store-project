@@ -86,9 +86,11 @@ describe('ResetPasswordUseCase', () => {
       expect(
         bcrypt.compareSync('NewSecret1!', persistedArg.hashedPassword),
       ).toBe(true);
-      expect(passwordResetTokenRepository.consumeToken).toHaveBeenCalledWith(
-        validToken,
-      );
+      const [consumedArg] =
+        passwordResetTokenRepository.consumeToken.mock.calls[0];
+      expect(consumedArg.id).toBe(validToken.id);
+      expect(consumedArg.jti).toBe(validToken.jti);
+      expect(consumedArg.deletedAt).not.toBeNull();
       expect(result.hashedPassword).toBe(persistedArg.hashedPassword);
     });
 

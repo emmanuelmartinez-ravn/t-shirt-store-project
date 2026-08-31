@@ -8,6 +8,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { InvalidResetTokenError } from '../../domain/errors/invalid-reset-token';
 import { UserNotFoundError } from '../../domain/errors/user-not-found';
+import { PasswordResetToken } from '../../domain/models/password-reset-token';
 import { User } from '../../domain/models/user';
 import { PasswordResetTokenRepository } from '../../infrastructure/repositories/password-reset-token.repository';
 import { UserRepository } from '../../infrastructure/repositories/user.repository';
@@ -47,7 +48,9 @@ export class ResetPasswordUseCase {
       const persistedUser =
         await this.userRepository.updatePassword(updatedUser);
 
-      await this.passwordResetTokenRepository.consumeToken(resetToken);
+      await this.passwordResetTokenRepository.consumeToken(
+        PasswordResetToken.consume(resetToken),
+      );
 
       this.logger.log(`Reset password for user ${persistedUser.email}`);
       return persistedUser;
