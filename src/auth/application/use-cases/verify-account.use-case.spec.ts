@@ -77,9 +77,11 @@ describe('VerifyAccountUseCase', () => {
     );
     const [activateArg] = userRepository.activateUser.mock.calls[0];
     expect(activateArg.disabled).toBe(false);
-    expect(accountActivationTokenRepository.consumeToken).toHaveBeenCalledWith(
-      validToken,
-    );
+    const [consumedArg] =
+      accountActivationTokenRepository.consumeToken.mock.calls[0];
+    expect(consumedArg.id).toBe(validToken.id);
+    expect(consumedArg.jti).toBe(validToken.jti);
+    expect(consumedArg.deletedAt).not.toBeNull();
     expect(result).toBe(activatedUser);
   });
 

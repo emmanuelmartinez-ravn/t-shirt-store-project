@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InvalidActivationTokenError } from '../../domain/errors/invalid-activation-token';
 import { UserNotFoundError } from '../../domain/errors/user-not-found';
+import { AccountActivationToken } from '../../domain/models/account-activation-token';
 import { User } from '../../domain/models/user';
 import { AccountActivationTokenRepository } from '../../infrastructure/repositories/account-activation-token.repository';
 import { UserRepository } from '../../infrastructure/repositories/user.repository';
@@ -40,7 +41,9 @@ export class VerifyAccountUseCase {
       const persistedUser =
         await this.userRepository.activateUser(activatedUser);
 
-      await this.accountActivationTokenRepository.consumeToken(activationToken);
+      await this.accountActivationTokenRepository.consumeToken(
+        AccountActivationToken.consume(activationToken),
+      );
 
       this.logger.log(`Activated user ${persistedUser.email}`);
       return persistedUser;
