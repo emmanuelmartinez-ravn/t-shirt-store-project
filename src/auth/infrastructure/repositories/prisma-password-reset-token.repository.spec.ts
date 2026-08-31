@@ -7,6 +7,8 @@ describe('PrismaPasswordResetTokenRepository', () => {
   let prisma: {
     passwordResetToken: {
       create: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -24,6 +26,8 @@ describe('PrismaPasswordResetTokenRepository', () => {
     prisma = {
       passwordResetToken: {
         create: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
       },
     };
     repository = new PrismaPasswordResetTokenRepository(
@@ -60,6 +64,61 @@ describe('PrismaPasswordResetTokenRepository', () => {
         },
       });
       expect(result).toEqual(token);
+    });
+  });
+
+  describe('getTokenByJti', () => {
+    it('returns the mapped domain entity when a live token matches', async () => {
+      prisma.passwordResetToken.findFirst.mockResolvedValue({
+        id: token.id,
+        jti: token.jti,
+        expiresAt: token.expiresAt,
+        createdAt: token.createdAt,
+        updatedAt: token.updatedAt,
+        deletedAt: null,
+        userId: token.userId,
+      });
+
+      const result = await repository.getTokenByJti('jti-value');
+
+      expect(prisma.passwordResetToken.findFirst).toHaveBeenCalledWith({
+        where: { jti: 'jti-value', deletedAt: null },
+      });
+      expect(result).toEqual(token);
+    });
+
+    it('returns null when no live token matches', async () => {
+      prisma.passwordResetToken.findFirst.mockResolvedValue(null);
+
+      const result = await repository.getTokenByJti('missing');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('consumeToken', () => {
+    it('soft-deletes the token and returns the mapped domain entity', async () => {
+      const consumed = PasswordResetToken.consume(token);
+      prisma.passwordResetToken.update.mockResolvedValue({
+        id: consumed.id,
+        jti: consumed.jti,
+        expiresAt: consumed.expiresAt,
+        createdAt: consumed.createdAt,
+        updatedAt: consumed.updatedAt,
+        deletedAt: consumed.deletedAt,
+        userId: consumed.userId,
+      });
+
+      const result = await repository.consumeToken(consumed);
+
+      expect(prisma.passwordResetToken.update).toHaveBeenCalledWith({
+        where: { id: consumed.id },
+        data: {
+          updatedAt: consumed.updatedAt,
+          deletedAt: consumed.deletedAt,
+        },
+      });
+      expect(result).toEqual(consumed);
     });
   });
 });

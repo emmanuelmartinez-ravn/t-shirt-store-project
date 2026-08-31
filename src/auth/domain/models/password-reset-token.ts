@@ -59,4 +59,20 @@ export class PasswordResetToken {
   }): PasswordResetToken {
     return new PasswordResetToken(props);
   }
+
+  static consume(token: PasswordResetToken): PasswordResetToken {
+    return new PasswordResetToken({
+      id: token.id,
+      jti: token.jti,
+      expiresAt: token.expiresAt,
+      createdAt: token.createdAt,
+      updatedAt: new Date(),
+      deletedAt: new Date(),
+      userId: token.userId,
+    });
+  }
+
+  isExpired(): boolean {
+    return this.expiresAt.getTime() < Date.now();
+  }
 }

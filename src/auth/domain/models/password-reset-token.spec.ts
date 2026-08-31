@@ -65,4 +65,63 @@ describe('PasswordResetToken', () => {
       expect(token).toMatchObject(props);
     });
   });
+
+  describe('consume', () => {
+    it('sets updatedAt and deletedAt to now while preserving other fields', () => {
+      const token = PasswordResetToken.restore({
+        id: 'token-id',
+        jti: 'jti-value',
+        expiresAt: new Date('2026-01-01T00:00:00.000Z'),
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        userId: 'user-id',
+      });
+      const before = Date.now();
+
+      const consumed = PasswordResetToken.consume(token);
+
+      const after = Date.now();
+      expect(consumed.id).toBe(token.id);
+      expect(consumed.jti).toBe(token.jti);
+      expect(consumed.expiresAt).toBe(token.expiresAt);
+      expect(consumed.createdAt).toBe(token.createdAt);
+      expect(consumed.userId).toBe(token.userId);
+      expect(consumed.deletedAt).not.toBeNull();
+      expect(consumed.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(consumed.updatedAt.getTime()).toBeLessThanOrEqual(after);
+      expect(consumed.deletedAt?.getTime()).toBeGreaterThanOrEqual(before);
+      expect(consumed.deletedAt?.getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
+  describe('isExpired', () => {
+    it('returns true when expiresAt is in the past', () => {
+      const token = PasswordResetToken.restore({
+        id: 'token-id',
+        jti: 'jti-value',
+        expiresAt: new Date(Date.now() - 60_000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        userId: 'user-id',
+      });
+
+      expect(token.isExpired()).toBe(true);
+    });
+
+    it('returns false when expiresAt is in the future', () => {
+      const token = PasswordResetToken.restore({
+        id: 'token-id',
+        jti: 'jti-value',
+        expiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        userId: 'user-id',
+      });
+
+      expect(token.isExpired()).toBe(false);
+    });
+  });
 });
