@@ -222,6 +222,22 @@ describe('Product', () => {
       expect(product).toMatchObject(props);
     });
 
+    it('carries a null categoryId through when the product has no category', () => {
+      const product = Product.restore({
+        id: 'product-id',
+        name: 'Classic Tee',
+        code: 'TS-000001',
+        description: 'A classic cotton t-shirt',
+        disabled: false,
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        categoryId: null,
+      });
+
+      expect(product.categoryId).toBeNull();
+    });
+
     it('carries the productVariants array through when provided', () => {
       const productVariants = [
         ProductVariant.restore({

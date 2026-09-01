@@ -37,6 +37,24 @@ describe('ProductsResponseMapper', () => {
       });
     });
 
+    it('maps a null categoryId through unchanged when the product has no category', () => {
+      const productWithoutCategory = Product.restore({
+        id: product.id,
+        name: product.name,
+        code: product.code,
+        description: product.description,
+        disabled: product.disabled,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        deletedAt: product.deletedAt,
+        categoryId: null,
+      });
+
+      const result = ProductsResponseMapper.toResponse(productWithoutCategory);
+
+      expect(result.categoryId).toBeNull();
+    });
+
     it('omits the productVariants key entirely when productVariants is undefined', () => {
       const result = ProductsResponseMapper.toResponse(product);
 

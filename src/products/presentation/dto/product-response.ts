@@ -37,8 +37,10 @@ export class ProductResponseDto {
   @ApiProperty({
     description: 'Id of the category this product belongs to',
     example: '3f6a7c9e-8b1a-4b3a-9f1e-1a2b3c4d5e6f',
+    nullable: true,
+    type: String,
   })
-  categoryId!: string;
+  categoryId!: string | null;
 
   @ApiProperty({
     description: 'Date the product was created',

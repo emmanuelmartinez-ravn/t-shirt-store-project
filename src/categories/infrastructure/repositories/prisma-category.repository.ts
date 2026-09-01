@@ -75,13 +75,23 @@ export class PrismaCategoryRepository extends CategoryRepository {
 
   async deleteCategory(category: Category): Promise<Category> {
     try {
-      const record = await this.prisma.category.update({
-        where: { id: category.id },
-        data: {
-          updatedAt: category.updatedAt,
-          deletedAt: category.deletedAt,
-        },
-      });
+      const [record] = await this.prisma.$transaction([
+        this.prisma.category.update({
+          where: { id: category.id },
+          data: {
+            updatedAt: category.updatedAt,
+            deletedAt: category.deletedAt,
+          },
+        }),
+        this.prisma.product.updateMany({
+          where: { categoryId: category.id, deletedAt: null },
+          data: {
+            disabled: true,
+            categoryId: null,
+            updatedAt: category.updatedAt,
+          },
+        }),
+      ]);
 
       return CategoriesPersistenceMapper.toDomain(record);
     } catch (error) {
