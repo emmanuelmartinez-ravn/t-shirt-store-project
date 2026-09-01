@@ -7,6 +7,7 @@ describe('PrismaCartRepository', () => {
   let prisma: {
     cart: {
       create: jest.Mock;
+      findUnique: jest.Mock;
     };
   };
 
@@ -22,6 +23,7 @@ describe('PrismaCartRepository', () => {
     prisma = {
       cart: {
         create: jest.fn(),
+        findUnique: jest.fn(),
       },
     };
     repository = new PrismaCartRepository(prisma as unknown as PrismaService);
@@ -52,6 +54,36 @@ describe('PrismaCartRepository', () => {
         },
       });
       expect(result).toEqual(cart);
+    });
+  });
+
+  describe('getCartByUserId', () => {
+    it('returns the mapped domain entity when found', async () => {
+      prisma.cart.findUnique.mockResolvedValue({
+        id: cart.id,
+        userId: cart.userId,
+        createdAt: cart.createdAt,
+        updatedAt: cart.updatedAt,
+        deletedAt: null,
+      });
+
+      const result = await repository.getCartByUserId(cart.userId);
+
+      expect(prisma.cart.findUnique).toHaveBeenCalledWith({
+        where: { userId: cart.userId },
+      });
+      expect(result).toEqual(cart);
+    });
+
+    it('returns null when no cart is found for the user', async () => {
+      prisma.cart.findUnique.mockResolvedValue(null);
+
+      const result = await repository.getCartByUserId('user-id');
+
+      expect(prisma.cart.findUnique).toHaveBeenCalledWith({
+        where: { userId: 'user-id' },
+      });
+      expect(result).toBeNull();
     });
   });
 });
