@@ -8,12 +8,14 @@ import { ProductVariantsController } from './presentation/controllers/product-va
 import { ProductVariantRepository } from './infrastructure/repositories/product-variant.repository';
 import { PrismaProductVariantRepository } from './infrastructure/repositories/prisma-product-variant.repository';
 import { CreateProductVariantUseCase } from './application/use-cases/create-product-variant.use-case';
+import { GetAllProductVariantsUseCase } from './application/use-cases/get-all-product-variants.use-case';
 
 @Module({
   imports: [PrismaModule, AuthorizationModule, ProductsModule],
   controllers: [ProductVariantsController],
   providers: [
     CreateProductVariantUseCase,
+    GetAllProductVariantsUseCase,
     {
       provide: ProductVariantRepository,
       useClass: PrismaProductVariantRepository,
