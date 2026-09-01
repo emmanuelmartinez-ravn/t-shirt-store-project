@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RolesModule } from '../roles/roles.module';
 import { MailModule } from '../mail/mail.module';
+import { CartsModule } from '../carts/carts.module';
 import { AuthController } from './presentation/controllers/auth/auth.controller';
 import { AccountActivationTokensScheduler } from './presentation/schedulers/account-activation-tokens.scheduler';
 import { UserRepository } from './infrastructure/repositories/user.repository';
@@ -29,6 +30,7 @@ import { DeleteExpiredAccountActivationTokensUseCase } from './application/use-c
     PrismaModule,
     RolesModule,
     MailModule,
+    CartsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
