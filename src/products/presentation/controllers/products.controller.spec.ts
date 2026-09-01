@@ -5,6 +5,7 @@ import { CreateProductUseCase } from '../../application/use-cases/create-product
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
+import { ToggleProductDisabledUseCase } from '../../application/use-cases/toggle-product-disabled.use-case';
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.use-case';
 import { ProductsResponseMapper } from '../mappers/products-response.mapper';
 import { ProductsController } from './products.controller';
@@ -16,6 +17,7 @@ describe('ProductsController', () => {
   let getProductByIdUseCase: jest.Mocked<GetProductByIdUseCase>;
   let updateProductUseCase: jest.Mocked<UpdateProductUseCase>;
   let deleteProductUseCase: jest.Mocked<DeleteProductUseCase>;
+  let toggleProductDisabledUseCase: jest.Mocked<ToggleProductDisabledUseCase>;
 
   const product = Product.restore({
     id: 'product-id',
@@ -45,6 +47,9 @@ describe('ProductsController', () => {
     deleteProductUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<DeleteProductUseCase>;
+    toggleProductDisabledUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<ToggleProductDisabledUseCase>;
 
     controller = new ProductsController(
       createProductUseCase,
@@ -52,6 +57,7 @@ describe('ProductsController', () => {
       getProductByIdUseCase,
       updateProductUseCase,
       deleteProductUseCase,
+      toggleProductDisabledUseCase,
     );
   });
 
@@ -160,6 +166,34 @@ describe('ProductsController', () => {
     });
   });
 
+  describe('getDisabledProducts', () => {
+    it('delegates to the use case with disabled: true and the query params, and returns the mapped paginated response', async () => {
+      getAllProductsUseCase.execute.mockResolvedValue({
+        items: [product],
+        total: 1,
+      });
+
+      const result = await controller.getDisabledProducts({
+        page: 1,
+        limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+      });
+
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+        disabled: true,
+      });
+      expect(result).toEqual({
+        data: [ProductsResponseMapper.toResponse(product)],
+        pagination: PaginationMapper.buildMeta(1, 20, 1),
+      });
+    });
+  });
+
   describe('getProductById', () => {
     it('delegates to the use case and returns the mapped response', async () => {
       getProductByIdUseCase.execute.mockResolvedValue(product);
@@ -212,6 +246,19 @@ describe('ProductsController', () => {
       const result = await controller.deleteProduct('product-id');
 
       expect(deleteProductUseCase.execute).toHaveBeenCalledWith('product-id');
+      expect(result).toEqual(ProductsResponseMapper.toResponse(product));
+    });
+  });
+
+  describe('toggleDisabled', () => {
+    it('delegates to the use case and returns the mapped response', async () => {
+      toggleProductDisabledUseCase.execute.mockResolvedValue(product);
+
+      const result = await controller.toggleDisabled('product-id');
+
+      expect(toggleProductDisabledUseCase.execute).toHaveBeenCalledWith(
+        'product-id',
+      );
       expect(result).toEqual(ProductsResponseMapper.toResponse(product));
     });
   });

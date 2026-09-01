@@ -142,6 +142,66 @@ describe('Product', () => {
     });
   });
 
+  describe('setDisabled', () => {
+    it('flips disabled from false to true while preserving everything else', () => {
+      const product = Product.restore({
+        id: 'product-id',
+        name: 'Classic Tee',
+        code: 'TS-000001',
+        description: 'A classic cotton t-shirt',
+        disabled: false,
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        categoryId: 'category-id',
+      });
+      const before = Date.now();
+
+      const result = Product.setDisabled(product, true);
+
+      const after = Date.now();
+      expect(result.disabled).toBe(true);
+      expect(result.id).toBe(product.id);
+      expect(result.name).toBe(product.name);
+      expect(result.code).toBe(product.code);
+      expect(result.description).toBe(product.description);
+      expect(result.createdAt).toBe(product.createdAt);
+      expect(result.deletedAt).toBe(product.deletedAt);
+      expect(result.categoryId).toBe(product.categoryId);
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(result.updatedAt.getTime()).toBeLessThanOrEqual(after);
+    });
+
+    it('flips disabled from true to false while preserving everything else', () => {
+      const product = Product.restore({
+        id: 'product-id',
+        name: 'Classic Tee',
+        code: 'TS-000001',
+        description: 'A classic cotton t-shirt',
+        disabled: true,
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        categoryId: 'category-id',
+      });
+      const before = Date.now();
+
+      const result = Product.setDisabled(product, false);
+
+      const after = Date.now();
+      expect(result.disabled).toBe(false);
+      expect(result.id).toBe(product.id);
+      expect(result.name).toBe(product.name);
+      expect(result.code).toBe(product.code);
+      expect(result.description).toBe(product.description);
+      expect(result.createdAt).toBe(product.createdAt);
+      expect(result.deletedAt).toBe(product.deletedAt);
+      expect(result.categoryId).toBe(product.categoryId);
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(result.updatedAt.getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
   describe('restore', () => {
     it('rehydrates all fields as-is from persistence', () => {
       const props = {

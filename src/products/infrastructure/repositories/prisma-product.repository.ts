@@ -130,6 +130,18 @@ export class PrismaProductRepository extends ProductRepository {
     }
   }
 
+  async setDisabled(product: Product): Promise<Product> {
+    const record = await this.prisma.product.update({
+      where: { id: product.id },
+      data: {
+        disabled: product.disabled,
+        updatedAt: product.updatedAt,
+      },
+    });
+
+    return ProductsPersistenceMapper.toDomain(record);
+  }
+
   async getProductById(id: string): Promise<Product | null> {
     const record = await this.prisma.product.findUnique({ where: { id } });
 
