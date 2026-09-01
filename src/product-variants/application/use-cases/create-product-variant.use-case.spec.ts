@@ -30,6 +30,7 @@ describe('CreateProductVariantUseCase', () => {
   beforeEach(() => {
     productVariantRepository = {
       createProductVariant: jest.fn(),
+      getProductVariantById: jest.fn(),
     };
     productRepository = {
       createProduct: jest.fn(),

@@ -9,6 +9,7 @@ describe('PrismaProductVariantRepository', () => {
   let prisma: {
     productVariant: {
       create: jest.Mock;
+      findUnique: jest.Mock;
     };
   };
 
@@ -29,6 +30,7 @@ describe('PrismaProductVariantRepository', () => {
     prisma = {
       productVariant: {
         create: jest.fn(),
+        findUnique: jest.fn(),
       },
     };
     repository = new PrismaProductVariantRepository(
@@ -126,6 +128,41 @@ describe('PrismaProductVariantRepository', () => {
       await expect(
         repository.createProductVariant(variant),
       ).rejects.not.toThrow(ProductVariantAlreadyExistsError);
+    });
+  });
+
+  describe('getProductVariantById', () => {
+    it('returns the mapped domain entity when a record is found', async () => {
+      prisma.productVariant.findUnique.mockResolvedValue({
+        id: variant.id,
+        sku: variant.sku,
+        price: variant.price,
+        stock: variant.stock,
+        disabled: variant.disabled,
+        attributes: variant.attributes,
+        createdAt: variant.createdAt,
+        updatedAt: variant.updatedAt,
+        deletedAt: null,
+        productId: variant.productId,
+      });
+
+      const result = await repository.getProductVariantById(variant.id);
+
+      expect(prisma.productVariant.findUnique).toHaveBeenCalledWith({
+        where: { id: variant.id },
+      });
+      expect(result).toEqual(variant);
+    });
+
+    it('returns null when no record is found', async () => {
+      prisma.productVariant.findUnique.mockResolvedValue(null);
+
+      const result = await repository.getProductVariantById('missing-id');
+
+      expect(prisma.productVariant.findUnique).toHaveBeenCalledWith({
+        where: { id: 'missing-id' },
+      });
+      expect(result).toBeNull();
     });
   });
 });

@@ -21,5 +21,6 @@ import { CreateProductVariantUseCase } from './application/use-cases/create-prod
     JwtAuthGuard,
     PoliciesGuard,
   ],
+  exports: [ProductVariantRepository],
 })
 export class ProductVariantsModule {}
