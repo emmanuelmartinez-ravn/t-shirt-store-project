@@ -96,6 +96,23 @@ export class ProductVariant {
     });
   }
 
+  static delete(variant: ProductVariant): ProductVariant {
+    const now = new Date();
+
+    return new ProductVariant({
+      id: variant.id,
+      sku: variant.sku,
+      price: variant.price,
+      stock: variant.stock,
+      disabled: variant.disabled,
+      attributes: variant.attributes,
+      createdAt: variant.createdAt,
+      updatedAt: now,
+      deletedAt: now,
+      productId: variant.productId,
+    });
+  }
+
   static generateSku(
     productCode: string,
     attributes: Record<string, string>,

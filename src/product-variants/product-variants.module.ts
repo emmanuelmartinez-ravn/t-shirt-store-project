@@ -8,6 +8,7 @@ import { ProductVariantsController } from './presentation/controllers/product-va
 import { ProductVariantRepository } from './infrastructure/repositories/product-variant.repository';
 import { PrismaProductVariantRepository } from './infrastructure/repositories/prisma-product-variant.repository';
 import { CreateProductVariantUseCase } from './application/use-cases/create-product-variant.use-case';
+import { DeleteProductVariantUseCase } from './application/use-cases/delete-product-variant.use-case';
 import { GetAllProductVariantsUseCase } from './application/use-cases/get-all-product-variants.use-case';
 import { UpdateProductVariantUseCase } from './application/use-cases/update-product-variant.use-case';
 
@@ -18,6 +19,7 @@ import { UpdateProductVariantUseCase } from './application/use-cases/update-prod
     CreateProductVariantUseCase,
     GetAllProductVariantsUseCase,
     UpdateProductVariantUseCase,
+    DeleteProductVariantUseCase,
     {
       provide: ProductVariantRepository,
       useClass: PrismaProductVariantRepository,

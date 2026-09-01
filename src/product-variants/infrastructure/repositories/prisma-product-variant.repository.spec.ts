@@ -385,4 +385,60 @@ describe('PrismaProductVariantRepository', () => {
       );
     });
   });
+
+  describe('deleteProductVariant', () => {
+    const deletedVariant = ProductVariant.restore({
+      ...variant,
+      deletedAt: new Date(),
+    });
+
+    it('soft-deletes and returns the mapped domain entity', async () => {
+      prisma.productVariant.update.mockResolvedValue({
+        id: deletedVariant.id,
+        sku: deletedVariant.sku,
+        price: deletedVariant.price,
+        stock: deletedVariant.stock,
+        disabled: deletedVariant.disabled,
+        attributes: deletedVariant.attributes,
+        createdAt: deletedVariant.createdAt,
+        updatedAt: deletedVariant.updatedAt,
+        deletedAt: deletedVariant.deletedAt,
+        productId: deletedVariant.productId,
+      });
+
+      const result = await repository.deleteProductVariant(deletedVariant);
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith({
+        where: { id: deletedVariant.id },
+        data: {
+          updatedAt: deletedVariant.updatedAt,
+          deletedAt: deletedVariant.deletedAt,
+        },
+      });
+      expect(result).toEqual(deletedVariant);
+    });
+
+    it('translates a record-not-found error into ProductVariantNotFoundError', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(
+        repository.deleteProductVariant(deletedVariant),
+      ).rejects.toThrow(ProductVariantNotFoundError);
+    });
+
+    it('rethrows unrelated errors unchanged', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(
+        repository.deleteProductVariant(deletedVariant),
+      ).rejects.toThrow('connection lost');
+    });
+  });
 });
