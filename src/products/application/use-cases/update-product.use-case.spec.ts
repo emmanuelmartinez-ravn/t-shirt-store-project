@@ -41,6 +41,7 @@ describe('UpdateProductUseCase', () => {
       getAllProducts: jest.fn(),
       updateProduct: jest.fn(),
       deleteProduct: jest.fn(),
+      setDisabled: jest.fn(),
       getProductById: jest.fn(),
       getLastProductCode: jest.fn(),
     };

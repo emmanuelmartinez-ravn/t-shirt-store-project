@@ -12,6 +12,7 @@ import { GetAllProductsUseCase } from './application/use-cases/get-all-products.
 import { GetProductByIdUseCase } from './application/use-cases/get-product-by-id.use-case';
 import { UpdateProductUseCase } from './application/use-cases/update-product.use-case';
 import { DeleteProductUseCase } from './application/use-cases/delete-product.use-case';
+import { ToggleProductDisabledUseCase } from './application/use-cases/toggle-product-disabled.use-case';
 
 @Module({
   imports: [PrismaModule, AuthorizationModule, CategoriesModule],
@@ -22,6 +23,7 @@ import { DeleteProductUseCase } from './application/use-cases/delete-product.use
     GetProductByIdUseCase,
     UpdateProductUseCase,
     DeleteProductUseCase,
+    ToggleProductDisabledUseCase,
     { provide: ProductRepository, useClass: PrismaProductRepository },
     JwtAuthGuard,
     PoliciesGuard,

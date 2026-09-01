@@ -3,11 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,12 +27,12 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { Action } from '../../../authorization/ability/action.enum';
 import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
 import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../../../authorization/guards/policies.guard';
 import { ApiPaginatedResponse } from '../../../common/pagination/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../../../common/pagination/dto/pagination-query.dto';
 import { PaginatedResponse } from '../../../common/pagination/paginated-response';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
@@ -38,10 +41,12 @@ import { CreateProductUseCase } from '../../application/use-cases/create-product
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
+import { ToggleProductDisabledUseCase } from '../../application/use-cases/toggle-product-disabled.use-case';
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.use-case';
 import { CreateProductDto } from '../dto/product-create';
 import { UpdateProductDto } from '../dto/product-update';
 import { ProductResponseDto } from '../dto/product-response';
+import { ProductsQueryDto } from '../dto/products-query';
 import { ProductsResponseMapper } from '../mappers/products-response.mapper';
 
 const MANAGER_ONLY_UNAUTHORIZED_RESPONSE = {
@@ -71,6 +76,7 @@ export class ProductsController {
     private readonly getProductByIdUseCase: GetProductByIdUseCase,
     private readonly updateProductUseCase: UpdateProductUseCase,
     private readonly deleteProductUseCase: DeleteProductUseCase,
+    private readonly toggleProductDisabledUseCase: ToggleProductDisabledUseCase,
   ) {}
 
   @Post()
@@ -140,7 +146,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get all products' })
   @ApiPaginatedResponse(
     ProductResponseDto,
-    'Paginated list of live (non-deleted) products',
+    'Paginated list of enabled, live (non-deleted) products, optionally filtered by name and categoryId',
   )
   @ApiInternalServerErrorResponse({
     description: 'Unexpected server error',
@@ -148,11 +154,89 @@ export class ProductsController {
     examples: { InternalServerError: internalServerErrorExample },
   })
   public async getAllProducts(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ProductsQueryDto,
   ): Promise<PaginatedResponse<ProductResponseDto>> {
     const { items, total } = await this.getAllProductsUseCase.execute({
       page: query.page,
       limit: query.limit,
+      name: query.name,
+      categoryId: query.categoryId,
+      disabled: false,
+    });
+    return {
+      data: items.map((product) => ProductsResponseMapper.toResponse(product)),
+      pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
+    };
+  }
+
+  @Get('liked')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies(() => true)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get liked products',
+  })
+  @ApiPaginatedResponse(
+    ProductResponseDto,
+    'Paginated list of liked products, optionally filtered by name and categoryId',
+  )
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: { error: 'Invalid or expired token', details: [] },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async getLikedProducts(
+    @Req() req: Request,
+    @Query() query: ProductsQueryDto,
+  ): Promise<PaginatedResponse<ProductResponseDto>> {
+    const { items, total } = await this.getAllProductsUseCase.execute({
+      page: query.page,
+      limit: query.limit,
+      name: query.name,
+      categoryId: query.categoryId,
+      disabled: false,
+      liked: true,
+      userId: req.user!.sub,
+    });
+    return {
+      data: items.map((product) => ProductsResponseMapper.toResponse(product)),
+      pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
+    };
+  }
+
+  @Get('disabled')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies(() => true)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get disabled products' })
+  @ApiPaginatedResponse(
+    ProductResponseDto,
+    'Paginated list of disabled products, optionally filtered by name and categoryId',
+  )
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: { error: 'Invalid or expired token', details: [] },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async getDisabledProducts(
+    @Query() query: ProductsQueryDto,
+  ): Promise<PaginatedResponse<ProductResponseDto>> {
+    const { items, total } = await this.getAllProductsUseCase.execute({
+      page: query.page,
+      limit: query.limit,
+      name: query.name,
+      categoryId: query.categoryId,
+      disabled: true,
     });
     return {
       data: items.map((product) => ProductsResponseMapper.toResponse(product)),
@@ -314,6 +398,46 @@ export class ProductsController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ProductResponseDto> {
     const product = await this.deleteProductUseCase.execute(id);
+    return ProductsResponseMapper.toResponse(product);
+  }
+
+  @Patch(':id/disabled')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @ApiOperation({ summary: "Toggle a product's disabled status" })
+  @ApiOkResponse({
+    description: 'Updated product',
+    type: ProductResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description: 'Product not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Product not found',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async toggleDisabled(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ProductResponseDto> {
+    const product = await this.toggleProductDisabledUseCase.execute(id);
     return ProductsResponseMapper.toResponse(product);
   }
 }
