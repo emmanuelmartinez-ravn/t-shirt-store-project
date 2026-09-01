@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { ProductVariant } from '../../../product-variants/domain/models/product-variant';
 
 const PRODUCT_CODE_PREFIX = 'TS-';
 const PRODUCT_CODE_NUMBER_LENGTH = 6;
+
+export const PRODUCT_FIELDS = ['productVariants'] as const;
+export type ProductField = (typeof PRODUCT_FIELDS)[number];
 
 export class Product {
   readonly id: string;
@@ -13,6 +17,7 @@ export class Product {
   updatedAt: Date;
   deletedAt: Date | null;
   categoryId: string;
+  productVariants?: ProductVariant[];
 
   constructor(props: {
     id: string;
@@ -24,6 +29,7 @@ export class Product {
     updatedAt: Date;
     deletedAt: Date | null;
     categoryId: string;
+    productVariants?: ProductVariant[];
   }) {
     this.id = props.id;
     this.name = props.name;
@@ -34,6 +40,7 @@ export class Product {
     this.updatedAt = props.updatedAt;
     this.deletedAt = props.deletedAt;
     this.categoryId = props.categoryId;
+    this.productVariants = props.productVariants;
   }
 
   static create(props: {
@@ -118,6 +125,7 @@ export class Product {
     updatedAt: Date;
     deletedAt: Date | null;
     categoryId: string;
+    productVariants?: ProductVariant[];
   }): Product {
     return new Product(props);
   }

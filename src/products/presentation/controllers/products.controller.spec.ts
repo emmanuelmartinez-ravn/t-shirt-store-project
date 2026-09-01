@@ -111,6 +111,7 @@ describe('ProductsController', () => {
         limit: 20,
         name: 'shirt',
         categoryId: 'category-id',
+        fields: ['productVariants'],
       });
 
       expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
@@ -119,6 +120,7 @@ describe('ProductsController', () => {
         name: 'shirt',
         categoryId: 'category-id',
         disabled: false,
+        fields: ['productVariants'],
       });
       expect(result).toEqual({
         data: [ProductsResponseMapper.toResponse(product)],
@@ -148,6 +150,7 @@ describe('ProductsController', () => {
         limit: 20,
         name: 'shirt',
         categoryId: 'category-id',
+        fields: ['productVariants'],
       });
 
       expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
@@ -158,6 +161,7 @@ describe('ProductsController', () => {
         disabled: false,
         liked: true,
         userId: 'user-id',
+        fields: ['productVariants'],
       });
       expect(result).toEqual({
         data: [ProductsResponseMapper.toResponse(product)],
@@ -178,6 +182,7 @@ describe('ProductsController', () => {
         limit: 20,
         name: 'shirt',
         categoryId: 'category-id',
+        fields: ['productVariants'],
       });
 
       expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
@@ -186,6 +191,7 @@ describe('ProductsController', () => {
         name: 'shirt',
         categoryId: 'category-id',
         disabled: true,
+        fields: ['productVariants'],
       });
       expect(result).toEqual({
         data: [ProductsResponseMapper.toResponse(product)],

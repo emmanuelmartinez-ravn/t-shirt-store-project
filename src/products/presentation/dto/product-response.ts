@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductVariantResponseDto } from '../../../product-variants/presentation/dto/product-variant-response';
 
 export class ProductResponseDto {
   @ApiProperty({
@@ -58,4 +59,12 @@ export class ProductResponseDto {
     type: String,
   })
   deletedAt!: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Variants of this product; only present when fields includes productVariants',
+    type: ProductVariantResponseDto,
+    isArray: true,
+  })
+  productVariants?: ProductVariantResponseDto[];
 }

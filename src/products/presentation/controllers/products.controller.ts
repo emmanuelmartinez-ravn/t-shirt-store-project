@@ -162,6 +162,7 @@ export class ProductsController {
       name: query.name,
       categoryId: query.categoryId,
       disabled: false,
+      fields: query.fields,
     });
     return {
       data: items.map((product) => ProductsResponseMapper.toResponse(product)),
@@ -202,6 +203,7 @@ export class ProductsController {
       disabled: false,
       liked: true,
       userId: req.user!.sub,
+      fields: query.fields,
     });
     return {
       data: items.map((product) => ProductsResponseMapper.toResponse(product)),
@@ -237,6 +239,7 @@ export class ProductsController {
       name: query.name,
       categoryId: query.categoryId,
       disabled: true,
+      fields: query.fields,
     });
     return {
       data: items.map((product) => ProductsResponseMapper.toResponse(product)),

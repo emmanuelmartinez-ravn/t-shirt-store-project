@@ -1,5 +1,6 @@
 import { Prisma } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../prisma/services/prisma.service';
+import { ProductVariant } from '../../../product-variants/domain/models/product-variant';
 import { ProductAlreadyExistsError } from '../../domain/errors/product-already-exists';
 import { ProductNotFoundError } from '../../domain/errors/product-not-found';
 import { Product } from '../../domain/models/product';
@@ -340,6 +341,120 @@ describe('PrismaProductRepository', () => {
       );
       expect(prisma.product.count).toHaveBeenCalledWith({
         where: { deletedAt: null, disabled: false },
+      });
+    });
+
+    describe('when fields includes productVariants', () => {
+      const variantRecord = {
+        id: 'variant-id',
+        sku: 'TS-000001-BLK',
+        price: 19.99,
+        stock: 10,
+        disabled: false,
+        attributes: { color: 'black' },
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-01T00:00:00.000Z'),
+        deletedAt: null,
+        productId: product.id,
+      };
+
+      const variant = ProductVariant.restore(variantRecord);
+
+      beforeEach(() => {
+        prisma.product.findMany.mockResolvedValue([
+          {
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            description: product.description,
+            disabled: product.disabled,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+            deletedAt: null,
+            categoryId: product.categoryId,
+            variants: [variantRecord],
+          },
+        ]);
+      });
+
+      it('includes the live variants and maps them onto the domain product when no liked filter is set', async () => {
+        const result = await repository.getAllProducts({
+          page: 1,
+          limit: 20,
+          disabled: false,
+          fields: ['productVariants'],
+        });
+
+        expect(prisma.product.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            include: { variants: { where: { deletedAt: null } } },
+          }),
+        );
+        expect(result.items[0].productVariants).toEqual([variant]);
+      });
+
+      it('scopes the embedded variants to those liked by the user when liked and userId are both set', async () => {
+        await repository.getAllProducts({
+          page: 1,
+          limit: 20,
+          disabled: false,
+          liked: true,
+          userId: 'user-id',
+          fields: ['productVariants'],
+        });
+
+        expect(prisma.product.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            include: {
+              variants: {
+                where: {
+                  deletedAt: null,
+                  likedProductVariants: { some: { userId: 'user-id' } },
+                },
+              },
+            },
+          }),
+        );
+      });
+
+      it('embeds all live variants, not just disabled ones, when listing disabled products', async () => {
+        await repository.getAllProducts({
+          page: 1,
+          limit: 20,
+          disabled: true,
+          fields: ['productVariants'],
+        });
+
+        expect(prisma.product.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            include: { variants: { where: { deletedAt: null } } },
+          }),
+        );
+      });
+    });
+
+    it('calls findMany without an include key when fields is omitted', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20, disabled: false });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
+        skip: 0,
+        take: 20,
+      });
+    });
+
+    it('calls findMany without an include key when fields is empty', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        fields: [],
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
+        skip: 0,
+        take: 20,
       });
     });
   });
