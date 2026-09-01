@@ -317,4 +317,68 @@ describe('PrismaUserRepository', () => {
       expect(result).toEqual(updatedUser);
     });
   });
+
+  describe('deleteUser', () => {
+    it('soft-deletes the user and returns the mapped domain entity', async () => {
+      const deletedUser = User.delete(user);
+      prisma.user.update.mockResolvedValue({
+        id: deletedUser.id,
+        firstName: deletedUser.firstName,
+        lastName: deletedUser.lastName,
+        email: deletedUser.email,
+        hashedPassword: deletedUser.hashedPassword,
+        avatar: deletedUser.avatar,
+        disabled: deletedUser.disabled,
+        createdAt: deletedUser.createdAt,
+        updatedAt: deletedUser.updatedAt,
+        deletedAt: deletedUser.deletedAt,
+        roleId: deletedUser.roleId,
+      });
+
+      const result = await repository.deleteUser(deletedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: deletedUser.id },
+        data: {
+          updatedAt: deletedUser.updatedAt,
+          deletedAt: deletedUser.deletedAt,
+        },
+      });
+      expect(result).toEqual(deletedUser);
+    });
+  });
+
+  describe('anonymizeUser', () => {
+    it('masks PII and returns the mapped domain entity, without touching credentials or role', async () => {
+      const deletedUser = User.restore({ ...user, deletedAt: new Date() });
+      const anonymizedUser = User.anonymize(deletedUser);
+      prisma.user.update.mockResolvedValue({
+        id: anonymizedUser.id,
+        firstName: anonymizedUser.firstName,
+        lastName: anonymizedUser.lastName,
+        email: anonymizedUser.email,
+        hashedPassword: anonymizedUser.hashedPassword,
+        avatar: anonymizedUser.avatar,
+        disabled: anonymizedUser.disabled,
+        createdAt: anonymizedUser.createdAt,
+        updatedAt: anonymizedUser.updatedAt,
+        deletedAt: anonymizedUser.deletedAt,
+        roleId: anonymizedUser.roleId,
+      });
+
+      const result = await repository.anonymizeUser(anonymizedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: anonymizedUser.id },
+        data: {
+          firstName: '***',
+          lastName: '***',
+          email: '***',
+          avatar: '***',
+          updatedAt: anonymizedUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(anonymizedUser);
+    });
+  });
 });
