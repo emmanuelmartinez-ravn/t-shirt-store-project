@@ -14,6 +14,10 @@ describe('PrismaCategoryRepository', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    product: {
+      updateMany: jest.Mock;
+    };
+    $transaction: jest.Mock;
   };
 
   const category = Category.restore({
@@ -32,6 +36,10 @@ describe('PrismaCategoryRepository', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
+      product: {
+        updateMany: jest.fn(),
+      },
+      $transaction: jest.fn(),
     };
     repository = new PrismaCategoryRepository(
       prisma as unknown as PrismaService,
@@ -164,16 +172,21 @@ describe('PrismaCategoryRepository', () => {
   describe('deleteCategory', () => {
     it('soft-deletes the category and returns the mapped domain entity', async () => {
       const deletedCategory = Category.delete(category);
-      prisma.category.update.mockResolvedValue({
+      const updatedCategoryRecord = {
         id: deletedCategory.id,
         name: deletedCategory.name,
         createdAt: deletedCategory.createdAt,
         updatedAt: deletedCategory.updatedAt,
         deletedAt: deletedCategory.deletedAt,
-      });
+      };
+      prisma.$transaction.mockResolvedValue([
+        updatedCategoryRecord,
+        { count: 1 },
+      ]);
 
       const result = await repository.deleteCategory(deletedCategory);
 
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(prisma.category.update).toHaveBeenCalledWith({
         where: { id: deletedCategory.id },
         data: {
@@ -181,11 +194,19 @@ describe('PrismaCategoryRepository', () => {
           deletedAt: deletedCategory.deletedAt,
         },
       });
+      expect(prisma.product.updateMany).toHaveBeenCalledWith({
+        where: { categoryId: deletedCategory.id, deletedAt: null },
+        data: {
+          disabled: true,
+          categoryId: null,
+          updatedAt: deletedCategory.updatedAt,
+        },
+      });
       expect(result).toEqual(deletedCategory);
     });
 
     it('translates a record-not-found error into CategoryNotFoundError', async () => {
-      prisma.category.update.mockRejectedValue(
+      prisma.$transaction.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Record not found', {
           code: 'P2025',
           clientVersion: '7.9.1',
@@ -198,7 +219,7 @@ describe('PrismaCategoryRepository', () => {
     });
 
     it('rethrows unrelated errors unchanged', async () => {
-      prisma.category.update.mockRejectedValue(new Error('connection lost'));
+      prisma.$transaction.mockRejectedValue(new Error('connection lost'));
 
       await expect(repository.deleteCategory(category)).rejects.toThrow(
         'connection lost',

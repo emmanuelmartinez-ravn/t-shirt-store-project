@@ -628,6 +628,24 @@ describe('PrismaProductRepository', () => {
 
       expect(result).toBeNull();
     });
+
+    it('maps a null categoryId through unchanged when the product has no category', async () => {
+      prisma.product.findUnique.mockResolvedValue({
+        id: product.id,
+        name: product.name,
+        code: product.code,
+        description: product.description,
+        disabled: product.disabled,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        deletedAt: null,
+        categoryId: null,
+      });
+
+      const result = await repository.getProductById('product-id');
+
+      expect(result?.categoryId).toBeNull();
+    });
   });
 
   describe('getLastProductCode', () => {

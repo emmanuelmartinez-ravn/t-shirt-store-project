@@ -16,7 +16,7 @@ export class Product {
   readonly createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
-  categoryId: string;
+  categoryId: string | null;
   productVariants?: ProductVariant[];
 
   constructor(props: {
@@ -28,7 +28,7 @@ export class Product {
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
-    categoryId: string;
+    categoryId: string | null;
     productVariants?: ProductVariant[];
   }) {
     this.id = props.id;
@@ -124,7 +124,7 @@ export class Product {
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date | null;
-    categoryId: string;
+    categoryId: string | null;
     productVariants?: ProductVariant[];
   }): Product {
     return new Product(props);
