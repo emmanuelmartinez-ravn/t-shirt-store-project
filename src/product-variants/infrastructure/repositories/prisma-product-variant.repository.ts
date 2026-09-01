@@ -107,4 +107,26 @@ export class PrismaProductVariantRepository extends ProductVariantRepository {
       throw error;
     }
   }
+
+  async deleteProductVariant(variant: ProductVariant): Promise<ProductVariant> {
+    try {
+      const record = await this.prisma.productVariant.update({
+        where: { id: variant.id },
+        data: {
+          updatedAt: variant.updatedAt,
+          deletedAt: variant.deletedAt,
+        },
+      });
+
+      return ProductVariantPersistenceMapper.toDomain(record);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === RECORD_NOT_FOUND
+      ) {
+        throw new ProductVariantNotFoundError(variant.id);
+      }
+      throw error;
+    }
+  }
 }

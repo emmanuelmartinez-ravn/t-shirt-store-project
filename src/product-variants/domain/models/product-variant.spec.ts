@@ -119,6 +119,59 @@ describe('ProductVariant', () => {
     });
   });
 
+  describe('delete', () => {
+    it('preserves id, sku, price, stock, disabled, attributes, createdAt, and productId while stamping deletedAt and updatedAt', () => {
+      const variant = ProductVariant.restore({
+        id: 'variant-id',
+        sku: 'TS-000001-MED-BLU',
+        price: 19.99,
+        stock: 100,
+        disabled: false,
+        attributes: { size: 'medium', color: 'blue' },
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        productId: 'product-id',
+      });
+
+      const deleted = ProductVariant.delete(variant);
+
+      expect(deleted.id).toBe(variant.id);
+      expect(deleted.sku).toBe(variant.sku);
+      expect(deleted.price).toBe(variant.price);
+      expect(deleted.stock).toBe(variant.stock);
+      expect(deleted.disabled).toBe(variant.disabled);
+      expect(deleted.attributes).toBe(variant.attributes);
+      expect(deleted.createdAt).toBe(variant.createdAt);
+      expect(deleted.productId).toBe(variant.productId);
+    });
+
+    it('refreshes deletedAt and updatedAt to the current time', () => {
+      const variant = ProductVariant.restore({
+        id: 'variant-id',
+        sku: 'TS-000001-MED-BLU',
+        price: 19.99,
+        stock: 100,
+        disabled: false,
+        attributes: { size: 'medium', color: 'blue' },
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        productId: 'product-id',
+      });
+      const before = Date.now();
+
+      const deleted = ProductVariant.delete(variant);
+
+      const after = Date.now();
+      expect(deleted.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(deleted.updatedAt.getTime()).toBeLessThanOrEqual(after);
+      expect(deleted.deletedAt).not.toBeNull();
+      expect(deleted.deletedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      expect(deleted.deletedAt!.getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
   describe('restore', () => {
     it('rehydrates all fields as-is from persistence', () => {
       const props = {

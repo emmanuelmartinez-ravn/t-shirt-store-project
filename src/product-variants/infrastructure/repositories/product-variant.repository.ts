@@ -17,4 +17,7 @@ export abstract class ProductVariantRepository {
   abstract updateProductVariant(
     variant: ProductVariant,
   ): Promise<ProductVariant>;
+  abstract deleteProductVariant(
+    variant: ProductVariant,
+  ): Promise<ProductVariant>;
 }

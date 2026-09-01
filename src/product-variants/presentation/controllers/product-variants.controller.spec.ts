@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { CreateProductVariantUseCase } from '../../application/use-cases/create-product-variant.use-case';
+import { DeleteProductVariantUseCase } from '../../application/use-cases/delete-product-variant.use-case';
 import { GetAllProductVariantsUseCase } from '../../application/use-cases/get-all-product-variants.use-case';
 import { UpdateProductVariantUseCase } from '../../application/use-cases/update-product-variant.use-case';
 import { ProductVariant } from '../../domain/models/product-variant';
@@ -12,6 +13,7 @@ describe('ProductVariantsController', () => {
   let createProductVariantUseCase: jest.Mocked<CreateProductVariantUseCase>;
   let getAllProductVariantsUseCase: jest.Mocked<GetAllProductVariantsUseCase>;
   let updateProductVariantUseCase: jest.Mocked<UpdateProductVariantUseCase>;
+  let deleteProductVariantUseCase: jest.Mocked<DeleteProductVariantUseCase>;
 
   const variant = ProductVariant.restore({
     id: 'variant-id',
@@ -36,11 +38,15 @@ describe('ProductVariantsController', () => {
     updateProductVariantUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UpdateProductVariantUseCase>;
+    deleteProductVariantUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<DeleteProductVariantUseCase>;
 
     controller = new ProductVariantsController(
       createProductVariantUseCase,
       getAllProductVariantsUseCase,
       updateProductVariantUseCase,
+      deleteProductVariantUseCase,
     );
   });
 
@@ -176,6 +182,25 @@ describe('ProductVariantsController', () => {
       );
       expect(result).toEqual(
         ProductVariantResponseMapper.toResponse(updatedVariant),
+      );
+    });
+  });
+
+  describe('deleteProductVariant', () => {
+    it('delegates to the use case with the id and returns the mapped response', async () => {
+      const deletedVariant = ProductVariant.restore({
+        ...variant,
+        deletedAt: new Date(),
+      });
+      deleteProductVariantUseCase.execute.mockResolvedValue(deletedVariant);
+
+      const result = await controller.deleteProductVariant('variant-id');
+
+      expect(deleteProductVariantUseCase.execute).toHaveBeenCalledWith(
+        'variant-id',
+      );
+      expect(result).toEqual(
+        ProductVariantResponseMapper.toResponse(deletedVariant),
       );
     });
   });

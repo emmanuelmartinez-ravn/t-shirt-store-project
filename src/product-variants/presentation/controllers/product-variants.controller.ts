@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -16,6 +17,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiGoneResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -35,6 +37,7 @@ import { PaginationQueryDto } from '../../../common/pagination/dto/pagination-qu
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { CreateProductVariantUseCase } from '../../application/use-cases/create-product-variant.use-case';
+import { DeleteProductVariantUseCase } from '../../application/use-cases/delete-product-variant.use-case';
 import { GetAllProductVariantsUseCase } from '../../application/use-cases/get-all-product-variants.use-case';
 import { UpdateProductVariantUseCase } from '../../application/use-cases/update-product-variant.use-case';
 import { CreateProductVariantDto } from '../dto/product-variant-create';
@@ -67,6 +70,7 @@ export class ProductVariantsController {
     private readonly createProductVariantUseCase: CreateProductVariantUseCase,
     private readonly getAllProductVariantsUseCase: GetAllProductVariantsUseCase,
     private readonly updateProductVariantUseCase: UpdateProductVariantUseCase,
+    private readonly deleteProductVariantUseCase: DeleteProductVariantUseCase,
   ) {}
 
   @Post()
@@ -301,6 +305,47 @@ export class ProductVariantsController {
       price: dto.price,
       stock: dto.stock,
     });
+    return ProductVariantResponseMapper.toResponse(variant);
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @ApiOperation({ summary: 'Soft-delete a product variant' })
+  @ApiOkResponse({
+    description: 'Soft-deleted product variant',
+    type: ProductVariantResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description: 'Product variant not found',
+    type: ErrorResponseDto,
+    example: { error: 'Product variant not found', details: [] },
+  })
+  @ApiGoneResponse({
+    description: 'Product variant already deleted',
+    type: ErrorResponseDto,
+    example: { error: 'Product variant already deleted', details: [] },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async deleteProductVariant(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ProductVariantResponseDto> {
+    const variant = await this.deleteProductVariantUseCase.execute(id);
     return ProductVariantResponseMapper.toResponse(variant);
   }
 }
