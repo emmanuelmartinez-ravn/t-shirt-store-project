@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -13,9 +21,14 @@ import type { Request } from 'express';
 import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
 import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../../../authorization/guards/policies.guard';
+import { ApiPaginatedResponse } from '../../../common/pagination/decorators/api-paginated-response.decorator';
+import { PaginationQueryDto } from '../../../common/pagination/dto/pagination-query.dto';
+import { PaginatedResponse } from '../../../common/pagination/paginated-response';
+import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { AddCartItemUseCase } from '../../application/use-cases/add-cart-item.use-case';
+import { GetAllCartItemsUseCase } from '../../application/use-cases/get-all-cart-items.use-case';
 import { AddCartItemDto } from '../dto/add-cart-item';
 import { CartItemResponseDto } from '../dto/cart-item-response';
 import { CartItemResponseMapper } from '../mappers/cart-item-response.mapper';
@@ -34,7 +47,10 @@ import { CartItemResponseMapper } from '../mappers/cart-item-response.mapper';
 })
 @Controller('cart-items')
 export class CartItemsController {
-  constructor(private readonly addCartItemUseCase: AddCartItemUseCase) {}
+  constructor(
+    private readonly addCartItemUseCase: AddCartItemUseCase,
+    private readonly getAllCartItemsUseCase: GetAllCartItemsUseCase,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -81,5 +97,31 @@ export class CartItemsController {
       quantity: dto.quantity,
     });
     return CartItemResponseMapper.toResponse(cartItem);
+  }
+
+  @Get()
+  @ApiOperation({ summary: "Get the authenticated user's cart items" })
+  @ApiPaginatedResponse(
+    CartItemResponseDto,
+    "Paginated list of the authenticated user's cart items",
+  )
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async getAllCartItems(
+    @Req() req: Request,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<CartItemResponseDto>> {
+    const { items, total } = await this.getAllCartItemsUseCase.execute({
+      userId: req.user!.sub,
+      page: query.page,
+      limit: query.limit,
+    });
+    return {
+      data: items.map((item) => CartItemResponseMapper.toResponse(item)),
+      pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
+    };
   }
 }
