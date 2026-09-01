@@ -33,6 +33,9 @@ export class SignInUseCase {
       const user = await this.userRepository.getUserByEmail(props.email);
 
       if (!user) {
+        this.logger.warn(
+          `Failed to sign in user ${props.email}: email not found`,
+        );
         throw new InvalidCredentialsError();
       }
 
@@ -42,6 +45,9 @@ export class SignInUseCase {
       );
 
       if (!passwordMatches) {
+        this.logger.warn(
+          `Failed to sign in user ${props.email}: password mismatch`,
+        );
         throw new InvalidCredentialsError();
       }
 
@@ -62,14 +68,14 @@ export class SignInUseCase {
       this.logger.log(`Signed in user ${user.email}`);
       return tokens;
     } catch (error) {
-      this.logger.error(`Failed to sign in user ${props.email}`, error);
-
       if (error instanceof InvalidCredentialsError) {
         throw new UnauthorizedException({
           error: 'Invalid email or password',
           details: [],
         });
       }
+
+      this.logger.error(`Failed to sign in user ${props.email}`, error);
 
       if (error instanceof AccountDisabledError) {
         throw new ForbiddenException({
