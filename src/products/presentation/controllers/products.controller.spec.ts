@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { Product } from '../../domain/models/product';
 import { CreateProductUseCase } from '../../application/use-cases/create-product.use-case';
@@ -93,17 +94,64 @@ describe('ProductsController', () => {
   });
 
   describe('getAllProducts', () => {
-    it('delegates to the use case with the query params and returns the mapped paginated response', async () => {
+    it('delegates to the use case with disabled: false and the query params, and returns the mapped paginated response', async () => {
       getAllProductsUseCase.execute.mockResolvedValue({
         items: [product],
         total: 1,
       });
 
-      const result = await controller.getAllProducts({ page: 1, limit: 20 });
+      const result = await controller.getAllProducts({
+        page: 1,
+        limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+      });
 
       expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
         page: 1,
         limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+        disabled: false,
+      });
+      expect(result).toEqual({
+        data: [ProductsResponseMapper.toResponse(product)],
+        pagination: PaginationMapper.buildMeta(1, 20, 1),
+      });
+    });
+  });
+
+  describe('getLikedProducts', () => {
+    const req = {
+      user: {
+        sub: 'user-id',
+        email: 'joe.doe@example.com',
+        role: 'client',
+        roleId: 'role-id',
+      },
+    } as unknown as Request;
+
+    it('delegates to the use case with disabled: false, liked: true, the authenticated userId, and the query params, and returns the mapped paginated response', async () => {
+      getAllProductsUseCase.execute.mockResolvedValue({
+        items: [product],
+        total: 1,
+      });
+
+      const result = await controller.getLikedProducts(req, {
+        page: 1,
+        limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+      });
+
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        name: 'shirt',
+        categoryId: 'category-id',
+        disabled: false,
+        liked: true,
+        userId: 'user-id',
       });
       expect(result).toEqual({
         data: [ProductsResponseMapper.toResponse(product)],

@@ -44,23 +44,45 @@ describe('GetAllProductsUseCase', () => {
       total: products.length,
     });
 
-    const result = await useCase.execute({ page: 1, limit: 20 });
+    const result = await useCase.execute({
+      page: 1,
+      limit: 20,
+      disabled: false,
+    });
 
     expect(result).toEqual({ items: products, total: products.length });
   });
 
-  it('passes the page and limit params through unchanged to the repository', async () => {
+  it('passes the params through unchanged to the repository, including optional filters', async () => {
     productRepository.getAllProducts.mockResolvedValue({
       items: products,
       total: products.length,
     });
-
-    await useCase.execute({ page: 2, limit: 10 });
-
-    expect(productRepository.getAllProducts).toHaveBeenCalledWith({
+    const params = {
       page: 2,
       limit: 10,
+      name: 'shirt',
+      categoryId: 'category-id',
+      disabled: true,
+      liked: true,
+      userId: 'user-id',
+    };
+
+    await useCase.execute(params);
+
+    expect(productRepository.getAllProducts).toHaveBeenCalledWith(params);
+  });
+
+  it('passes the params through unchanged to the repository when optional filters are omitted', async () => {
+    productRepository.getAllProducts.mockResolvedValue({
+      items: products,
+      total: products.length,
     });
+    const params = { page: 1, limit: 20, disabled: false };
+
+    await useCase.execute(params);
+
+    expect(productRepository.getAllProducts).toHaveBeenCalledWith(params);
   });
 
   it('translates unexpected errors into an InternalServerErrorException', async () => {
@@ -68,8 +90,8 @@ describe('GetAllProductsUseCase', () => {
       new Error('connection lost'),
     );
 
-    await expect(useCase.execute({ page: 1, limit: 20 })).rejects.toThrow(
-      InternalServerErrorException,
-    );
+    await expect(
+      useCase.execute({ page: 1, limit: 20, disabled: false }),
+    ).rejects.toThrow(InternalServerErrorException);
   });
 });

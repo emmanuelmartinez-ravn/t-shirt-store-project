@@ -50,17 +50,28 @@ export class PrismaProductRepository extends ProductRepository {
   async getAllProducts(params: {
     page: number;
     limit: number;
+    name?: string;
+    categoryId?: string;
+    disabled: boolean;
+    liked?: boolean;
+    userId?: string;
   }): Promise<PaginatedResult<Product>> {
-    const { page, limit } = params;
+    const { page, limit, name, categoryId, disabled, liked, userId } = params;
     const skip = (page - 1) * limit;
 
+    const where: Prisma.ProductWhereInput = {
+      deletedAt: null,
+      disabled,
+      ...(name ? { name: { contains: name, mode: 'insensitive' } } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(liked === true && userId
+        ? { variants: { some: { likedProductVariants: { some: { userId } } } } }
+        : {}),
+    };
+
     const [records, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where: { deletedAt: null },
-        skip,
-        take: limit,
-      }),
-      this.prisma.product.count({ where: { deletedAt: null } }),
+      this.prisma.product.findMany({ where, skip, take: limit }),
+      this.prisma.product.count({ where }),
     ]);
 
     return {

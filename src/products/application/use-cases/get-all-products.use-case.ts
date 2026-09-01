@@ -16,6 +16,11 @@ export class GetAllProductsUseCase {
   async execute(params: {
     page: number;
     limit: number;
+    name?: string;
+    categoryId?: string;
+    disabled: boolean;
+    liked?: boolean;
+    userId?: string;
   }): Promise<PaginatedResult<Product>> {
     try {
       const result = await this.productRepository.getAllProducts(params);

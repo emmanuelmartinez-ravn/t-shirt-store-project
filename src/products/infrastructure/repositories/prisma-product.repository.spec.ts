@@ -156,39 +156,190 @@ describe('PrismaProductRepository', () => {
     });
 
     it('returns the live products mapped to domain entities alongside the total count', async () => {
-      const result = await repository.getAllProducts({ page: 1, limit: 20 });
+      const result = await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+      });
 
       expect(result).toEqual({ items: [product], total: 1 });
     });
 
-    it('filters out soft-deleted products on both findMany and count', async () => {
-      await repository.getAllProducts({ page: 1, limit: 20 });
+    it('builds a baseline where clause with only deletedAt and disabled when no other filters are provided', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20, disabled: false });
 
-      expect(prisma.product.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { deletedAt: null } }),
-      );
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
+        skip: 0,
+        take: 20,
+      });
       expect(prisma.product.count).toHaveBeenCalledWith({
-        where: { deletedAt: null },
+        where: { deletedAt: null, disabled: false },
       });
     });
 
     it('skips zero records on the first page', async () => {
-      await repository.getAllProducts({ page: 1, limit: 20 });
+      await repository.getAllProducts({ page: 1, limit: 20, disabled: false });
 
       expect(prisma.product.findMany).toHaveBeenCalledWith({
-        where: { deletedAt: null },
+        where: { deletedAt: null, disabled: false },
         skip: 0,
         take: 20,
       });
     });
 
     it('skips the correct number of records on a later page', async () => {
-      await repository.getAllProducts({ page: 2, limit: 10 });
+      await repository.getAllProducts({ page: 2, limit: 10, disabled: false });
 
       expect(prisma.product.findMany).toHaveBeenCalledWith({
-        where: { deletedAt: null },
+        where: { deletedAt: null, disabled: false },
         skip: 10,
         take: 10,
+      });
+    });
+
+    it('builds a case-insensitive partial match clause when name is provided', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        name: 'shirt',
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deletedAt: null,
+            disabled: false,
+            name: { contains: 'shirt', mode: 'insensitive' },
+          },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          disabled: false,
+          name: { contains: 'shirt', mode: 'insensitive' },
+        },
+      });
+    });
+
+    it('filters by categoryId when provided', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        categoryId: 'category-id',
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deletedAt: null,
+            disabled: false,
+            categoryId: 'category-id',
+          },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          disabled: false,
+          categoryId: 'category-id',
+        },
+      });
+    });
+
+    it('builds the where clause with disabled: true when filtering for disabled products', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20, disabled: true });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deletedAt: null, disabled: true },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: true },
+      });
+    });
+
+    it('builds the where clause with disabled: false when filtering for enabled products', async () => {
+      await repository.getAllProducts({ page: 1, limit: 20, disabled: false });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deletedAt: null, disabled: false },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
+      });
+    });
+
+    it('builds a some-liked variants clause when liked: true and userId are both provided', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        liked: true,
+        userId: 'user-id',
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deletedAt: null,
+            disabled: false,
+            variants: {
+              some: { likedProductVariants: { some: { userId: 'user-id' } } },
+            },
+          },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          disabled: false,
+          variants: {
+            some: { likedProductVariants: { some: { userId: 'user-id' } } },
+          },
+        },
+      });
+    });
+
+    it('omits the variants clause entirely when liked is provided without userId', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        liked: true,
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deletedAt: null, disabled: false },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
+      });
+    });
+
+    it('omits the variants clause entirely when userId is provided without liked', async () => {
+      await repository.getAllProducts({
+        page: 1,
+        limit: 20,
+        disabled: false,
+        userId: 'user-id',
+      });
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { deletedAt: null, disabled: false },
+        }),
+      );
+      expect(prisma.product.count).toHaveBeenCalledWith({
+        where: { deletedAt: null, disabled: false },
       });
     });
   });

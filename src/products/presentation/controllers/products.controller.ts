@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,12 +25,12 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { Action } from '../../../authorization/ability/action.enum';
 import { CheckPolicies } from '../../../authorization/decorators/check-policies.decorator';
 import { JwtAuthGuard } from '../../../authorization/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../../../authorization/guards/policies.guard';
 import { ApiPaginatedResponse } from '../../../common/pagination/decorators/api-paginated-response.decorator';
-import { PaginationQueryDto } from '../../../common/pagination/dto/pagination-query.dto';
 import { PaginatedResponse } from '../../../common/pagination/paginated-response';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
@@ -42,6 +43,7 @@ import { UpdateProductUseCase } from '../../application/use-cases/update-product
 import { CreateProductDto } from '../dto/product-create';
 import { UpdateProductDto } from '../dto/product-update';
 import { ProductResponseDto } from '../dto/product-response';
+import { ProductsQueryDto } from '../dto/products-query';
 import { ProductsResponseMapper } from '../mappers/products-response.mapper';
 
 const MANAGER_ONLY_UNAUTHORIZED_RESPONSE = {
@@ -140,7 +142,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get all products' })
   @ApiPaginatedResponse(
     ProductResponseDto,
-    'Paginated list of live (non-deleted) products',
+    'Paginated list of enabled, live (non-deleted) products, optionally filtered by name and categoryId',
   )
   @ApiInternalServerErrorResponse({
     description: 'Unexpected server error',
@@ -148,11 +150,54 @@ export class ProductsController {
     examples: { InternalServerError: internalServerErrorExample },
   })
   public async getAllProducts(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ProductsQueryDto,
   ): Promise<PaginatedResponse<ProductResponseDto>> {
     const { items, total } = await this.getAllProductsUseCase.execute({
       page: query.page,
       limit: query.limit,
+      name: query.name,
+      categoryId: query.categoryId,
+      disabled: false,
+    });
+    return {
+      data: items.map((product) => ProductsResponseMapper.toResponse(product)),
+      pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
+    };
+  }
+
+  @Get('liked')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies(() => true)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get liked products',
+  })
+  @ApiPaginatedResponse(
+    ProductResponseDto,
+    'Paginated list of liked products, optionally filtered by name and categoryId',
+  )
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: { error: 'Invalid or expired token', details: [] },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async getLikedProducts(
+    @Req() req: Request,
+    @Query() query: ProductsQueryDto,
+  ): Promise<PaginatedResponse<ProductResponseDto>> {
+    const { items, total } = await this.getAllProductsUseCase.execute({
+      page: query.page,
+      limit: query.limit,
+      name: query.name,
+      categoryId: query.categoryId,
+      disabled: false,
+      liked: true,
+      userId: req.user!.sub,
     });
     return {
       data: items.map((product) => ProductsResponseMapper.toResponse(product)),
