@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CartsModule } from '../carts/carts.module';
 import { ProductVariantsModule } from '../product-variants/product-variants.module';
 import { AddCartItemUseCase } from './application/use-cases/add-cart-item.use-case';
+import { GetAllCartItemsUseCase } from './application/use-cases/get-all-cart-items.use-case';
 import { CartItemRepository } from './infrastructure/repositories/cart-item.repository';
 import { PrismaCartItemRepository } from './infrastructure/repositories/prisma-cart-item.repository';
 import { CartItemsController } from './presentation/controllers/cart-items.controller';
@@ -20,6 +21,7 @@ import { CartItemsController } from './presentation/controllers/cart-items.contr
   controllers: [CartItemsController],
   providers: [
     AddCartItemUseCase,
+    GetAllCartItemsUseCase,
     { provide: CartItemRepository, useClass: PrismaCartItemRepository },
     JwtAuthGuard,
     PoliciesGuard,

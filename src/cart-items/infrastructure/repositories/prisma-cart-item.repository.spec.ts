@@ -7,6 +7,8 @@ describe('PrismaCartItemRepository', () => {
   let prisma: {
     cartItem: {
       create: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
     };
   };
 
@@ -24,6 +26,8 @@ describe('PrismaCartItemRepository', () => {
     prisma = {
       cartItem: {
         create: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
       },
     };
     repository = new PrismaCartItemRepository(
@@ -60,6 +64,90 @@ describe('PrismaCartItemRepository', () => {
         },
       });
       expect(result).toEqual(cartItem);
+    });
+  });
+
+  describe('getAllCartItems', () => {
+    beforeEach(() => {
+      prisma.cartItem.findMany.mockResolvedValue([
+        {
+          id: cartItem.id,
+          quantity: cartItem.quantity,
+          createdAt: cartItem.createdAt,
+          updatedAt: cartItem.updatedAt,
+          deletedAt: null,
+          cartId: cartItem.cartId,
+          productVariantId: cartItem.productVariantId,
+        },
+      ]);
+      prisma.cartItem.count.mockResolvedValue(1);
+    });
+
+    it('returns the live cart items mapped to domain entities alongside the total count', async () => {
+      const result = await repository.getAllCartItems({
+        userId: 'user-id',
+        page: 1,
+        limit: 20,
+      });
+
+      expect(result).toEqual({ items: [cartItem], total: 1 });
+    });
+
+    it('filters by the cart relation, not a direct userId field, since CartItem has none', async () => {
+      await repository.getAllCartItems({
+        userId: 'user-id',
+        page: 1,
+        limit: 20,
+      });
+
+      expect(prisma.cartItem.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          cart: { userId: 'user-id', deletedAt: null },
+        },
+        skip: 0,
+        take: 20,
+      });
+      expect(prisma.cartItem.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          cart: { userId: 'user-id', deletedAt: null },
+        },
+      });
+    });
+
+    it('skips zero records on the first page', async () => {
+      await repository.getAllCartItems({
+        userId: 'user-id',
+        page: 1,
+        limit: 20,
+      });
+
+      expect(prisma.cartItem.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          cart: { userId: 'user-id', deletedAt: null },
+        },
+        skip: 0,
+        take: 20,
+      });
+    });
+
+    it('skips the correct number of records on a later page', async () => {
+      await repository.getAllCartItems({
+        userId: 'user-id',
+        page: 2,
+        limit: 10,
+      });
+
+      expect(prisma.cartItem.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          cart: { userId: 'user-id', deletedAt: null },
+        },
+        skip: 10,
+        take: 10,
+      });
     });
   });
 });

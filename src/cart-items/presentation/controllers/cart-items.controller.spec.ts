@@ -1,5 +1,7 @@
 import { Request } from 'express';
+import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { AddCartItemUseCase } from '../../application/use-cases/add-cart-item.use-case';
+import { GetAllCartItemsUseCase } from '../../application/use-cases/get-all-cart-items.use-case';
 import { CartItem } from '../../domain/models/cart-item';
 import { CartItemResponseMapper } from '../mappers/cart-item-response.mapper';
 import { CartItemsController } from './cart-items.controller';
@@ -7,6 +9,7 @@ import { CartItemsController } from './cart-items.controller';
 describe('CartItemsController', () => {
   let controller: CartItemsController;
   let addCartItemUseCase: jest.Mocked<AddCartItemUseCase>;
+  let getAllCartItemsUseCase: jest.Mocked<GetAllCartItemsUseCase>;
 
   const cartItem = CartItem.restore({
     id: 'cart-item-id',
@@ -31,8 +34,14 @@ describe('CartItemsController', () => {
     addCartItemUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<AddCartItemUseCase>;
+    getAllCartItemsUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetAllCartItemsUseCase>;
 
-    controller = new CartItemsController(addCartItemUseCase);
+    controller = new CartItemsController(
+      addCartItemUseCase,
+      getAllCartItemsUseCase,
+    );
   });
 
   it('is defined', () => {
@@ -54,6 +63,30 @@ describe('CartItemsController', () => {
         quantity: 2,
       });
       expect(result).toEqual(CartItemResponseMapper.toResponse(cartItem));
+    });
+  });
+
+  describe('getAllCartItems', () => {
+    it('delegates to the use case with the authenticated user id and the query params, and returns the mapped paginated response', async () => {
+      getAllCartItemsUseCase.execute.mockResolvedValue({
+        items: [cartItem],
+        total: 1,
+      });
+
+      const result = await controller.getAllCartItems(req, {
+        page: 1,
+        limit: 20,
+      });
+
+      expect(getAllCartItemsUseCase.execute).toHaveBeenCalledWith({
+        userId: 'user-id',
+        page: 1,
+        limit: 20,
+      });
+      expect(result).toEqual({
+        data: [CartItemResponseMapper.toResponse(cartItem)],
+        pagination: PaginationMapper.buildMeta(1, 20, 1),
+      });
     });
   });
 });

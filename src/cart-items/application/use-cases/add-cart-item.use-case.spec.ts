@@ -50,6 +50,7 @@ describe('AddCartItemUseCase', () => {
   beforeEach(() => {
     cartItemRepository = {
       createCartItem: jest.fn(),
+      getAllCartItems: jest.fn(),
     };
     cartRepository = {
       createCart: jest.fn(),
