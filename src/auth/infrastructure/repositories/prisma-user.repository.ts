@@ -117,4 +117,31 @@ export class PrismaUserRepository extends UserRepository {
 
     return UserPersistenceMapper.toDomain(record);
   }
+
+  async deleteUser(user: User): Promise<User> {
+    const record = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        updatedAt: user.updatedAt,
+        deletedAt: user.deletedAt,
+      },
+    });
+
+    return UserPersistenceMapper.toDomain(record);
+  }
+
+  async anonymizeUser(user: User): Promise<User> {
+    const record = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: user.avatar,
+        updatedAt: user.updatedAt,
+      },
+    });
+
+    return UserPersistenceMapper.toDomain(record);
+  }
 }

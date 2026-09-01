@@ -9,4 +9,6 @@ export abstract class UserRepository {
   abstract updatePassword(user: User): Promise<User>;
   abstract updateProfile(user: User): Promise<User>;
   abstract setDisabled(user: User): Promise<User>;
+  abstract deleteUser(user: User): Promise<User>;
+  abstract anonymizeUser(user: User): Promise<User>;
 }

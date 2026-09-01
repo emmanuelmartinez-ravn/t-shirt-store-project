@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+const ANONYMIZED_VALUE = '***';
+
 export class User {
   readonly id: string;
   firstName: string;
@@ -154,6 +156,38 @@ export class User {
       email: user.email,
       hashedPassword: user.hashedPassword,
       avatar: user.avatar,
+      disabled: user.disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: user.deletedAt,
+      roleId: user.roleId,
+    });
+  }
+
+  static delete(user: User): User {
+    return new User({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      hashedPassword: user.hashedPassword,
+      avatar: user.avatar,
+      disabled: user.disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: new Date(),
+      roleId: user.roleId,
+    });
+  }
+
+  static anonymize(user: User): User {
+    return new User({
+      id: user.id,
+      firstName: ANONYMIZED_VALUE,
+      lastName: ANONYMIZED_VALUE,
+      email: ANONYMIZED_VALUE,
+      hashedPassword: user.hashedPassword,
+      avatar: ANONYMIZED_VALUE,
       disabled: user.disabled,
       createdAt: user.createdAt,
       updatedAt: new Date(),

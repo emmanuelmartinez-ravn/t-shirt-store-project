@@ -49,6 +49,8 @@ describe('ResetPasswordUseCase', () => {
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
       setDisabled: jest.fn(),
+      deleteUser: jest.fn(),
+      anonymizeUser: jest.fn(),
     };
     passwordResetTokenRepository = {
       createToken: jest.fn(),
