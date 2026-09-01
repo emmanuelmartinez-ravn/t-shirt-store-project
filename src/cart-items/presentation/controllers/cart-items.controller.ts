@@ -54,7 +54,7 @@ export class CartItemsController {
 
   @Post()
   @ApiOperation({
-    summary: "Add a product variant to the authenticated user's cart",
+    summary: "Add a product variant to the user's cart",
   })
   @ApiCreatedResponse({
     description: 'Created cart item',
@@ -77,7 +77,7 @@ export class CartItemsController {
         value: { error: 'Product variant not found', details: [] },
       },
       CartNotFound: {
-        summary: "Authenticated user's cart not found",
+        summary: "User's cart not found",
         value: { error: 'Cart not found', details: [] },
       },
     },
@@ -99,11 +99,11 @@ export class CartItemsController {
     return CartItemResponseMapper.toResponse(cartItem);
   }
 
-  @Get()
-  @ApiOperation({ summary: "Get the authenticated user's cart items" })
+  @Get('me')
+  @ApiOperation({ summary: "Get the user's cart items" })
   @ApiPaginatedResponse(
     CartItemResponseDto,
-    "Paginated list of the authenticated user's cart items",
+    "Paginated list of the user's cart items",
   )
   @ApiInternalServerErrorResponse({
     description: 'Unexpected server error',
