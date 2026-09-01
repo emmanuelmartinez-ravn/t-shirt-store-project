@@ -32,6 +32,7 @@ import { UserResponseMapper } from '../../../auth/presentation/mappers/user-resp
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
+import { ToggleUserDisabledUseCase } from '../../application/use-cases/toggle-user-disabled.use-case';
 import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { UpdatePasswordDto } from '../dto/update-password';
@@ -53,6 +54,7 @@ import { UpdateProfileDto } from '../dto/update-profile';
 export class UsersController {
   constructor(
     private readonly promoteUserToManagerUseCase: PromoteUserToManagerUseCase,
+    private readonly toggleUserDisabledUseCase: ToggleUserDisabledUseCase,
     private readonly updatePasswordUseCase: UpdatePasswordUseCase,
     private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
@@ -130,6 +132,49 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserResponseDto> {
     const user = await this.promoteUserToManagerUseCase.execute(id);
+    return UserResponseMapper.toResponse(user);
+  }
+
+  @Patch(':id/disabled')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Toggle a user's disabled status" })
+  @ApiOkResponse({
+    description: 'Updated user',
+    type: UserResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'The authenticated caller is not a manager',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Insufficient permissions',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async toggleDisabled(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<UserResponseDto> {
+    const user = await this.toggleUserDisabledUseCase.execute(id);
     return UserResponseMapper.toResponse(user);
   }
 

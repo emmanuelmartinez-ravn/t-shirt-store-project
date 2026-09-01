@@ -14,6 +14,7 @@ describe('GetAllRolesUseCase', () => {
       getRoleByName: jest.fn(),
       getRoleById: jest.fn(),
       updateRole: jest.fn(),
+      deleteRole: jest.fn(),
     };
 
     useCase = new GetAllRolesUseCase(roleRepository);

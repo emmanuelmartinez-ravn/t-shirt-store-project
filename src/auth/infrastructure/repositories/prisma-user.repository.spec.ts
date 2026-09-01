@@ -254,6 +254,36 @@ describe('PrismaUserRepository', () => {
     });
   });
 
+  describe('setDisabled', () => {
+    it('persists the disabled flag and returns the mapped domain entity', async () => {
+      const disabledUser = User.setDisabled(user, false);
+      prisma.user.update.mockResolvedValue({
+        id: disabledUser.id,
+        firstName: disabledUser.firstName,
+        lastName: disabledUser.lastName,
+        email: disabledUser.email,
+        hashedPassword: disabledUser.hashedPassword,
+        avatar: disabledUser.avatar,
+        disabled: disabledUser.disabled,
+        createdAt: disabledUser.createdAt,
+        updatedAt: disabledUser.updatedAt,
+        deletedAt: null,
+        roleId: disabledUser.roleId,
+      });
+
+      const result = await repository.setDisabled(disabledUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: disabledUser.id },
+        data: {
+          disabled: false,
+          updatedAt: disabledUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(disabledUser);
+    });
+  });
+
   describe('updateProfile', () => {
     it('updates the name and returns the mapped domain entity', async () => {
       const updatedUser = User.updateProfile(user, {

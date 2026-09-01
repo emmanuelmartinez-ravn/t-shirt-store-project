@@ -127,6 +127,22 @@ export class User {
     });
   }
 
+  static setDisabled(user: User, disabled: boolean): User {
+    return new User({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      hashedPassword: user.hashedPassword,
+      avatar: user.avatar,
+      disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: user.deletedAt,
+      roleId: user.roleId,
+    });
+  }
+
   static updateProfile(
     user: User,
     props: { firstName: string; lastName: string },

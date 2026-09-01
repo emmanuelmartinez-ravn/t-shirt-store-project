@@ -37,6 +37,7 @@ describe('UpdatePasswordUseCase', () => {
       promoteUser: jest.fn(),
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
+      setDisabled: jest.fn(),
     };
 
     useCase = new UpdatePasswordUseCase(userRepository);

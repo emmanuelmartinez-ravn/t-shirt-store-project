@@ -56,8 +56,10 @@ describe('RefreshUseCase', () => {
       getUserById: jest.fn(),
       getUserByEmail: jest.fn(),
       activateUser: jest.fn(),
+      promoteUser: jest.fn(),
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
+      setDisabled: jest.fn(),
     };
     roleRepository = {
       createRole: jest.fn(),
