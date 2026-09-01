@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../generated/prisma/client';
+import { PaginatedResult } from '../../../common/pagination/paginated-result';
 import { PrismaService } from '../../../prisma/services/prisma.service';
 import { ProductVariantAlreadyExistsError } from '../../domain/errors/product-variant-already-exists';
 import { ProductVariant } from '../../domain/models/product-variant';
@@ -40,6 +41,39 @@ export class PrismaProductVariantRepository extends ProductVariantRepository {
       }
       throw error;
     }
+  }
+
+  async getAllProductVariants(params: {
+    productId: string;
+    page: number;
+    limit: number;
+    disabled: boolean;
+    liked?: boolean;
+    userId?: string;
+  }): Promise<PaginatedResult<ProductVariant>> {
+    const { productId, page, limit, disabled, liked, userId } = params;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ProductVariantWhereInput = {
+      productId,
+      deletedAt: null,
+      disabled,
+      ...(liked === true && userId
+        ? { likedProductVariants: { some: { userId } } }
+        : {}),
+    };
+
+    const [records, total] = await Promise.all([
+      this.prisma.productVariant.findMany({ where, skip, take: limit }),
+      this.prisma.productVariant.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) =>
+        ProductVariantPersistenceMapper.toDomain(record),
+      ),
+      total,
+    };
   }
 
   async getProductVariantById(id: string): Promise<ProductVariant | null> {
