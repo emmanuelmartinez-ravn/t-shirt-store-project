@@ -92,6 +92,22 @@ export class Product {
     });
   }
 
+  static setDisabled(product: Product, disabled: boolean): Product {
+    const now = new Date();
+
+    return new Product({
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      description: product.description,
+      disabled,
+      createdAt: product.createdAt,
+      updatedAt: now,
+      deletedAt: product.deletedAt,
+      categoryId: product.categoryId,
+    });
+  }
+
   static restore(props: {
     id: string;
     name: string;

@@ -456,6 +456,34 @@ describe('PrismaProductRepository', () => {
     });
   });
 
+  describe('setDisabled', () => {
+    it('persists the disabled flag and returns the mapped domain entity', async () => {
+      const disabledProduct = Product.setDisabled(product, true);
+      prisma.product.update.mockResolvedValue({
+        id: disabledProduct.id,
+        name: disabledProduct.name,
+        code: disabledProduct.code,
+        description: disabledProduct.description,
+        disabled: disabledProduct.disabled,
+        createdAt: disabledProduct.createdAt,
+        updatedAt: disabledProduct.updatedAt,
+        deletedAt: disabledProduct.deletedAt,
+        categoryId: disabledProduct.categoryId,
+      });
+
+      const result = await repository.setDisabled(disabledProduct);
+
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: disabledProduct.id },
+        data: {
+          disabled: disabledProduct.disabled,
+          updatedAt: disabledProduct.updatedAt,
+        },
+      });
+      expect(result).toEqual(disabledProduct);
+    });
+  });
+
   describe('getProductById', () => {
     it('returns the mapped domain entity when the product exists', async () => {
       prisma.product.findUnique.mockResolvedValue({
