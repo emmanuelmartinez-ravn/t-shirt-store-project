@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../generated/prisma/client';
 import { PaginatedResult } from '../../../common/pagination/paginated-result';
 import { PrismaService } from '../../../prisma/services/prisma.service';
+import { ProductVariantPersistenceMapper } from '../../../product-variants/infrastructure/mappers/product-variant-persistence.mapper';
 import { ProductAlreadyExistsError } from '../../domain/errors/product-already-exists';
 import { ProductNotFoundError } from '../../domain/errors/product-not-found';
-import { Product } from '../../domain/models/product';
+import { Product, ProductField } from '../../domain/models/product';
 import { ProductsPersistenceMapper } from '../mappers/products-persistence.mapper';
 import { ProductRepository } from './product.repository';
 
@@ -55,8 +56,10 @@ export class PrismaProductRepository extends ProductRepository {
     disabled: boolean;
     liked?: boolean;
     userId?: string;
+    fields?: ProductField[];
   }): Promise<PaginatedResult<Product>> {
-    const { page, limit, name, categoryId, disabled, liked, userId } = params;
+    const { page, limit, name, categoryId, disabled, liked, userId, fields } =
+      params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductWhereInput = {
@@ -68,6 +71,36 @@ export class PrismaProductRepository extends ProductRepository {
         ? { variants: { some: { likedProductVariants: { some: { userId } } } } }
         : {}),
     };
+
+    if (fields?.includes('productVariants')) {
+      const variantsWhere: Prisma.ProductVariantWhereInput = {
+        deletedAt: null,
+        ...(liked === true && userId
+          ? { likedProductVariants: { some: { userId } } }
+          : {}),
+      };
+
+      const [records, total] = await Promise.all([
+        this.prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          include: { variants: { where: variantsWhere } },
+        }),
+        this.prisma.product.count({ where }),
+      ]);
+
+      return {
+        items: records.map((record) => {
+          const product = ProductsPersistenceMapper.toDomain(record);
+          product.productVariants = record.variants.map((variant) =>
+            ProductVariantPersistenceMapper.toDomain(variant),
+          );
+          return product;
+        }),
+        total,
+      };
+    }
 
     const [records, total] = await Promise.all([
       this.prisma.product.findMany({ where, skip, take: limit }),

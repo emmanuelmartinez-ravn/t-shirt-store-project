@@ -1,5 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
-import { Product } from '../../domain/models/product';
+import { Product, ProductField } from '../../domain/models/product';
 import { ProductRepository } from '../../infrastructure/repositories/product.repository';
 import { GetAllProductsUseCase } from './get-all-products.use-case';
 
@@ -67,6 +67,7 @@ describe('GetAllProductsUseCase', () => {
       disabled: true,
       liked: true,
       userId: 'user-id',
+      fields: ['productVariants'] as ProductField[],
     };
 
     await useCase.execute(params);

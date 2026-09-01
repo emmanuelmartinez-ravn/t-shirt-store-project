@@ -1,3 +1,4 @@
+import { ProductVariant } from '../../../product-variants/domain/models/product-variant';
 import { Product } from './product';
 
 describe('Product', () => {
@@ -219,6 +220,54 @@ describe('Product', () => {
       const product = Product.restore(props);
 
       expect(product).toMatchObject(props);
+    });
+
+    it('carries the productVariants array through when provided', () => {
+      const productVariants = [
+        ProductVariant.restore({
+          id: 'variant-id',
+          sku: 'TS-000001-BLK',
+          price: 19.99,
+          stock: 10,
+          disabled: false,
+          attributes: { color: 'black' },
+          createdAt: new Date('2025-12-01T00:00:00.000Z'),
+          updatedAt: new Date('2025-12-01T00:00:00.000Z'),
+          deletedAt: null,
+          productId: 'product-id',
+        }),
+      ];
+
+      const product = Product.restore({
+        id: 'product-id',
+        name: 'Classic Tee',
+        code: 'TS-000001',
+        description: 'A classic cotton t-shirt',
+        disabled: false,
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        categoryId: 'category-id',
+        productVariants,
+      });
+
+      expect(product.productVariants).toBe(productVariants);
+    });
+
+    it('leaves productVariants undefined when omitted', () => {
+      const product = Product.restore({
+        id: 'product-id',
+        name: 'Classic Tee',
+        code: 'TS-000001',
+        description: 'A classic cotton t-shirt',
+        disabled: false,
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        categoryId: 'category-id',
+      });
+
+      expect(product.productVariants).toBeUndefined();
     });
   });
 

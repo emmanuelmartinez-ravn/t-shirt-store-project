@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PaginatedResult } from '../../../common/pagination/paginated-result';
-import { Product } from '../../domain/models/product';
+import { Product, ProductField } from '../../domain/models/product';
 import { ProductRepository } from '../../infrastructure/repositories/product.repository';
 
 @Injectable()
@@ -21,6 +21,7 @@ export class GetAllProductsUseCase {
     disabled: boolean;
     liked?: boolean;
     userId?: string;
+    fields?: ProductField[];
   }): Promise<PaginatedResult<Product>> {
     try {
       const result = await this.productRepository.getAllProducts(params);
