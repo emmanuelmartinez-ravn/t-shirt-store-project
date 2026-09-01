@@ -5,6 +5,7 @@ import {
 import { Role } from '../../../roles/domain/models/role';
 import { RoleRepository } from '../../../roles/infrastructure/repositories/role.repository';
 import { EmailQueueService } from '../../../mail/services/email-queue.service';
+import { CartRepository } from '../../../carts/infrastructure/repositories/cart.repository';
 import { UserAlreadyExistsError } from '../../domain/errors/user-already-exists';
 import { User } from '../../domain/models/user';
 import { AccountActivationTokenRepository } from '../../infrastructure/repositories/account-activation-token.repository';
@@ -17,6 +18,7 @@ describe('SignUpUseCase', () => {
   let accountActivationTokenRepository: jest.Mocked<AccountActivationTokenRepository>;
   let roleRepository: jest.Mocked<RoleRepository>;
   let emailQueueService: jest.Mocked<EmailQueueService>;
+  let cartRepository: jest.Mocked<CartRepository>;
 
   const role = Role.restore({
     id: 'role-id',
@@ -65,12 +67,16 @@ describe('SignUpUseCase', () => {
       enqueueAccountVerificationEmail: jest.fn(),
       enqueuePasswordResetEmail: jest.fn(),
     };
+    cartRepository = {
+      createCart: jest.fn(),
+    };
 
     useCase = new SignUpUseCase(
       userRepository,
       accountActivationTokenRepository,
       roleRepository,
       emailQueueService,
+      cartRepository,
     );
   });
 
@@ -94,6 +100,9 @@ describe('SignUpUseCase', () => {
       roleId: role.id,
     });
     userRepository.createUser.mockResolvedValue(createdUser);
+    cartRepository.createCart.mockImplementation((cart) =>
+      Promise.resolve(cart),
+    );
     accountActivationTokenRepository.createToken.mockImplementation((token) =>
       Promise.resolve(token),
     );
@@ -101,6 +110,9 @@ describe('SignUpUseCase', () => {
     const result = await useCase.execute(signUpProps);
 
     expect(roleRepository.getRoleByName).toHaveBeenCalledWith('client');
+    expect(cartRepository.createCart).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: createdUser.id }),
+    );
     const [createdUserArg] = userRepository.createUser.mock.calls[0];
     expect(createdUserArg.avatar).toBe('');
     expect(createdUserArg.disabled).toBe(true);
@@ -134,6 +146,9 @@ describe('SignUpUseCase', () => {
       roleId: role.id,
     });
     userRepository.createUser.mockResolvedValue(createdUser);
+    cartRepository.createCart.mockImplementation((cart) =>
+      Promise.resolve(cart),
+    );
     accountActivationTokenRepository.createToken.mockImplementation((token) =>
       Promise.resolve(token),
     );
@@ -143,6 +158,9 @@ describe('SignUpUseCase', () => {
 
     const result = await useCase.execute(signUpProps);
 
+    expect(cartRepository.createCart).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: createdUser.id }),
+    );
     expect(result).toBe(createdUser);
   });
 
@@ -173,5 +191,29 @@ describe('SignUpUseCase', () => {
     await expect(useCase.execute(signUpProps)).rejects.toThrow(
       InternalServerErrorException,
     );
+  });
+
+  it('translates a cart creation failure into an InternalServerErrorException', async () => {
+    roleRepository.getRoleByName.mockResolvedValue(role);
+    const createdUser = User.restore({
+      id: 'user-id',
+      firstName: 'Joe',
+      lastName: 'Doe',
+      email: 'joe.doe@example.com',
+      hashedPassword: 'hashed',
+      avatar: '',
+      disabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      roleId: role.id,
+    });
+    userRepository.createUser.mockResolvedValue(createdUser);
+    cartRepository.createCart.mockRejectedValue(new Error('connection lost'));
+
+    await expect(useCase.execute(signUpProps)).rejects.toThrow(
+      InternalServerErrorException,
+    );
+    expect(accountActivationTokenRepository.createToken).not.toHaveBeenCalled();
   });
 });

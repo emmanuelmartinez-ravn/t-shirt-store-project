@@ -7,6 +7,8 @@ import {
 import * as bcrypt from 'bcrypt';
 import { RoleRepository } from '../../../roles/infrastructure/repositories/role.repository';
 import { EmailQueueService } from '../../../mail/services/email-queue.service';
+import { CartRepository } from '../../../carts/infrastructure/repositories/cart.repository';
+import { Cart } from '../../../carts/domain/models/cart';
 import { getAccountActivationTokenTtlMinutes } from '../config/account-activation-token-ttl';
 import { DefaultRoleNotFoundError } from '../../domain/errors/default-role-not-found';
 import { UserAlreadyExistsError } from '../../domain/errors/user-already-exists';
@@ -27,6 +29,7 @@ export class SignUpUseCase {
     private readonly accountActivationTokenRepository: AccountActivationTokenRepository,
     private readonly roleRepository: RoleRepository,
     private readonly emailQueueService: EmailQueueService,
+    private readonly cartRepository: CartRepository,
   ) {}
 
   async execute(props: {
@@ -57,6 +60,9 @@ export class SignUpUseCase {
         roleId: role.id,
       });
       const createdUser = await this.userRepository.createUser(user);
+
+      const cart = Cart.create({ userId: createdUser.id });
+      await this.cartRepository.createCart(cart);
 
       const ttlMinutes = getAccountActivationTokenTtlMinutes();
       const activationToken = AccountActivationToken.create({

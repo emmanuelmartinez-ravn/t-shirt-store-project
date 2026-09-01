@@ -35,7 +35,7 @@ export async function seedManagerUser(prisma: PrismaClient): Promise<void> {
     MANAGER_USER.password,
     PASSWORD_SALT_ROUNDS,
   );
-  await prisma.user.create({
+  const createdUser = await prisma.user.create({
     data: {
       firstName: MANAGER_USER.firstName,
       lastName: MANAGER_USER.lastName,
@@ -46,6 +46,7 @@ export async function seedManagerUser(prisma: PrismaClient): Promise<void> {
       roleId: managerRole.id,
     },
   });
+  await prisma.cart.create({ data: { userId: createdUser.id } });
   console.log(
     `Created manager user "${MANAGER_USER.email}" (password: "${MANAGER_USER.password}")`,
   );
