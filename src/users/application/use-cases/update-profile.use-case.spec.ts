@@ -34,6 +34,9 @@ describe('UpdateProfileUseCase', () => {
       promoteUser: jest.fn(),
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
+      setDisabled: jest.fn(),
+      deleteUser: jest.fn(),
+      anonymizeUser: jest.fn(),
     };
 
     useCase = new UpdateProfileUseCase(userRepository);

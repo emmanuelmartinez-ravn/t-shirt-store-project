@@ -34,9 +34,14 @@ describe('ForgotPasswordUseCase', () => {
       promoteUser: jest.fn(),
       updatePassword: jest.fn(),
       updateProfile: jest.fn(),
+      setDisabled: jest.fn(),
+      deleteUser: jest.fn(),
+      anonymizeUser: jest.fn(),
     };
     passwordResetTokenRepository = {
       createToken: jest.fn(),
+      getTokenByJti: jest.fn(),
+      consumeToken: jest.fn(),
     };
     emailQueueService = {
       enqueueAccountVerificationEmail: jest.fn(),
