@@ -26,5 +26,6 @@ import { DeleteProductUseCase } from './application/use-cases/delete-product.use
     JwtAuthGuard,
     PoliciesGuard,
   ],
+  exports: [ProductRepository],
 })
 export class ProductsModule {}

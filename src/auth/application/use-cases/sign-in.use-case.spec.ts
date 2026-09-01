@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -32,8 +33,12 @@ describe('SignInUseCase', () => {
 
   let hashedPassword: string;
   let user: User;
+  let warnSpy: jest.SpyInstance;
+  let errorSpy: jest.SpyInstance;
 
   beforeEach(async () => {
+    warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     hashedPassword = await bcrypt.hash(signInProps.password, 4);
     user = User.restore({
       id: 'user-id',
@@ -76,6 +81,10 @@ describe('SignInUseCase', () => {
     );
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('is defined', () => {
     expect(useCase).toBeDefined();
   });
@@ -101,19 +110,58 @@ describe('SignInUseCase', () => {
   it('translates a missing user into an UnauthorizedException', async () => {
     userRepository.getUserByEmail.mockResolvedValue(null);
 
+    const promise = useCase.execute(signInProps);
+
+    await expect(promise).rejects.toThrow(UnauthorizedException);
+    await expect(promise).rejects.toMatchObject({
+      response: { error: 'Invalid email or password', details: [] },
+    });
+    expect(issueAuthTokensService.issueTokens).not.toHaveBeenCalled();
+  });
+
+  it('logs at warn level which check failed when the email is not found, without logging at error level', async () => {
+    userRepository.getUserByEmail.mockResolvedValue(null);
+
     await expect(useCase.execute(signInProps)).rejects.toThrow(
       UnauthorizedException,
     );
-    expect(issueAuthTokensService.issueTokens).not.toHaveBeenCalled();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`${signInProps.email}: email not found`),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('translates a wrong password into an UnauthorizedException', async () => {
     userRepository.getUserByEmail.mockResolvedValue(user);
 
-    await expect(
-      useCase.execute({ ...signInProps, password: 'wrong-password' }),
-    ).rejects.toThrow(UnauthorizedException);
+    const promise = useCase.execute({
+      ...signInProps,
+      password: 'wrong-password',
+    });
+
+    await expect(promise).rejects.toThrow(UnauthorizedException);
+    await expect(promise).rejects.toMatchObject({
+      response: { error: 'Invalid email or password', details: [] },
+    });
     expect(issueAuthTokensService.issueTokens).not.toHaveBeenCalled();
+  });
+
+  it('logs at warn level which check failed when the password does not match, without logging the raw password or logging at error level', async () => {
+    userRepository.getUserByEmail.mockResolvedValue(user);
+    const wrongPassword = 'wrong-password';
+
+    await expect(
+      useCase.execute({ ...signInProps, password: wrongPassword }),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`${signInProps.email}: password mismatch`),
+    );
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining(wrongPassword),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('translates a disabled user into a ForbiddenException', async () => {
@@ -126,6 +174,17 @@ describe('SignInUseCase', () => {
     expect(issueAuthTokensService.issueTokens).not.toHaveBeenCalled();
   });
 
+  it('still logs at error level for a disabled account, since the reason was not already logged at warn level', async () => {
+    const disabledUser = User.restore({ ...user, disabled: true });
+    userRepository.getUserByEmail.mockResolvedValue(disabledUser);
+
+    await expect(useCase.execute(signInProps)).rejects.toThrow(
+      ForbiddenException,
+    );
+
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
   it('translates unexpected errors into an InternalServerErrorException', async () => {
     userRepository.getUserByEmail.mockRejectedValue(
       new Error('connection lost'),
@@ -134,5 +193,28 @@ describe('SignInUseCase', () => {
     await expect(useCase.execute(signInProps)).rejects.toThrow(
       InternalServerErrorException,
     );
+  });
+
+  it('still logs at error level for an unexpected error, since the reason was not already logged at warn level', async () => {
+    userRepository.getUserByEmail.mockRejectedValue(
+      new Error('connection lost'),
+    );
+
+    await expect(useCase.execute(signInProps)).rejects.toThrow(
+      InternalServerErrorException,
+    );
+
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('still logs at error level when the role for the user is not found, since the reason was not already logged at warn level', async () => {
+    userRepository.getUserByEmail.mockResolvedValue(user);
+    roleRepository.getRoleById.mockResolvedValue(null);
+
+    await expect(useCase.execute(signInProps)).rejects.toThrow(
+      InternalServerErrorException,
+    );
+
+    expect(errorSpy).toHaveBeenCalled();
   });
 });
