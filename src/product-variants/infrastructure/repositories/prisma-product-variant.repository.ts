@@ -3,11 +3,13 @@ import { Prisma } from '../../../../generated/prisma/client';
 import { PaginatedResult } from '../../../common/pagination/paginated-result';
 import { PrismaService } from '../../../prisma/services/prisma.service';
 import { ProductVariantAlreadyExistsError } from '../../domain/errors/product-variant-already-exists';
+import { ProductVariantNotFoundError } from '../../domain/errors/product-variant-not-found';
 import { ProductVariant } from '../../domain/models/product-variant';
 import { ProductVariantPersistenceMapper } from '../mappers/product-variant-persistence.mapper';
 import { ProductVariantRepository } from './product-variant.repository';
 
 const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
+const RECORD_NOT_FOUND = 'P2025';
 
 @Injectable()
 export class PrismaProductVariantRepository extends ProductVariantRepository {
@@ -81,5 +83,50 @@ export class PrismaProductVariantRepository extends ProductVariantRepository {
       where: { id },
     });
     return record ? ProductVariantPersistenceMapper.toDomain(record) : null;
+  }
+
+  async updateProductVariant(variant: ProductVariant): Promise<ProductVariant> {
+    try {
+      const record = await this.prisma.productVariant.update({
+        where: { id: variant.id },
+        data: {
+          price: variant.price,
+          stock: variant.stock,
+          updatedAt: variant.updatedAt,
+        },
+      });
+
+      return ProductVariantPersistenceMapper.toDomain(record);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === RECORD_NOT_FOUND
+      ) {
+        throw new ProductVariantNotFoundError(variant.id);
+      }
+      throw error;
+    }
+  }
+
+  async deleteProductVariant(variant: ProductVariant): Promise<ProductVariant> {
+    try {
+      const record = await this.prisma.productVariant.update({
+        where: { id: variant.id },
+        data: {
+          updatedAt: variant.updatedAt,
+          deletedAt: variant.deletedAt,
+        },
+      });
+
+      return ProductVariantPersistenceMapper.toDomain(record);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === RECORD_NOT_FOUND
+      ) {
+        throw new ProductVariantNotFoundError(variant.id);
+      }
+      throw error;
+    }
   }
 }

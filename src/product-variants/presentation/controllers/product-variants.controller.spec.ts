@@ -1,7 +1,9 @@
 import { Request } from 'express';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { CreateProductVariantUseCase } from '../../application/use-cases/create-product-variant.use-case';
+import { DeleteProductVariantUseCase } from '../../application/use-cases/delete-product-variant.use-case';
 import { GetAllProductVariantsUseCase } from '../../application/use-cases/get-all-product-variants.use-case';
+import { UpdateProductVariantUseCase } from '../../application/use-cases/update-product-variant.use-case';
 import { ProductVariant } from '../../domain/models/product-variant';
 import { ProductVariantResponseMapper } from '../mappers/product-variant-response.mapper';
 import { ProductVariantsController } from './product-variants.controller';
@@ -10,6 +12,8 @@ describe('ProductVariantsController', () => {
   let controller: ProductVariantsController;
   let createProductVariantUseCase: jest.Mocked<CreateProductVariantUseCase>;
   let getAllProductVariantsUseCase: jest.Mocked<GetAllProductVariantsUseCase>;
+  let updateProductVariantUseCase: jest.Mocked<UpdateProductVariantUseCase>;
+  let deleteProductVariantUseCase: jest.Mocked<DeleteProductVariantUseCase>;
 
   const variant = ProductVariant.restore({
     id: 'variant-id',
@@ -31,10 +35,18 @@ describe('ProductVariantsController', () => {
     getAllProductVariantsUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<GetAllProductVariantsUseCase>;
+    updateProductVariantUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UpdateProductVariantUseCase>;
+    deleteProductVariantUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<DeleteProductVariantUseCase>;
 
     controller = new ProductVariantsController(
       createProductVariantUseCase,
       getAllProductVariantsUseCase,
+      updateProductVariantUseCase,
+      deleteProductVariantUseCase,
     );
   });
 
@@ -147,6 +159,49 @@ describe('ProductVariantsController', () => {
         data: [ProductVariantResponseMapper.toResponse(variant)],
         pagination: PaginationMapper.buildMeta(1, 20, 1),
       });
+    });
+  });
+
+  describe('updateProductVariant', () => {
+    it('delegates to the use case with the price and stock, and returns the mapped response', async () => {
+      const updatedVariant = ProductVariant.restore({
+        ...variant,
+        price: 29.99,
+        stock: 50,
+      });
+      updateProductVariantUseCase.execute.mockResolvedValue(updatedVariant);
+
+      const result = await controller.updateProductVariant('variant-id', {
+        price: 29.99,
+        stock: 50,
+      });
+
+      expect(updateProductVariantUseCase.execute).toHaveBeenCalledWith(
+        'variant-id',
+        { price: 29.99, stock: 50 },
+      );
+      expect(result).toEqual(
+        ProductVariantResponseMapper.toResponse(updatedVariant),
+      );
+    });
+  });
+
+  describe('deleteProductVariant', () => {
+    it('delegates to the use case with the id and returns the mapped response', async () => {
+      const deletedVariant = ProductVariant.restore({
+        ...variant,
+        deletedAt: new Date(),
+      });
+      deleteProductVariantUseCase.execute.mockResolvedValue(deletedVariant);
+
+      const result = await controller.deleteProductVariant('variant-id');
+
+      expect(deleteProductVariantUseCase.execute).toHaveBeenCalledWith(
+        'variant-id',
+      );
+      expect(result).toEqual(
+        ProductVariantResponseMapper.toResponse(deletedVariant),
+      );
     });
   });
 });

@@ -1,6 +1,7 @@
 import { Prisma } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../prisma/services/prisma.service';
 import { ProductVariantAlreadyExistsError } from '../../domain/errors/product-variant-already-exists';
+import { ProductVariantNotFoundError } from '../../domain/errors/product-variant-not-found';
 import { ProductVariant } from '../../domain/models/product-variant';
 import { PrismaProductVariantRepository } from './prisma-product-variant.repository';
 
@@ -12,6 +13,7 @@ describe('PrismaProductVariantRepository', () => {
       findMany: jest.Mock;
       count: jest.Mock;
       findUnique: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -35,6 +37,7 @@ describe('PrismaProductVariantRepository', () => {
         findMany: jest.fn(),
         count: jest.fn(),
         findUnique: jest.fn(),
+        update: jest.fn(),
       },
     };
     repository = new PrismaProductVariantRepository(
@@ -328,6 +331,114 @@ describe('PrismaProductVariantRepository', () => {
         where: { id: 'missing-id' },
       });
       expect(result).toBeNull();
+    });
+  });
+
+  describe('updateProductVariant', () => {
+    it('updates the price and stock and returns the mapped domain entity', async () => {
+      prisma.productVariant.update.mockResolvedValue({
+        id: variant.id,
+        sku: variant.sku,
+        price: variant.price,
+        stock: variant.stock,
+        disabled: variant.disabled,
+        attributes: variant.attributes,
+        createdAt: variant.createdAt,
+        updatedAt: variant.updatedAt,
+        deletedAt: null,
+        productId: variant.productId,
+      });
+
+      const result = await repository.updateProductVariant(variant);
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith({
+        where: { id: variant.id },
+        data: {
+          price: variant.price,
+          stock: variant.stock,
+          updatedAt: variant.updatedAt,
+        },
+      });
+      expect(result).toEqual(variant);
+    });
+
+    it('translates a record-not-found error into ProductVariantNotFoundError', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(repository.updateProductVariant(variant)).rejects.toThrow(
+        ProductVariantNotFoundError,
+      );
+    });
+
+    it('rethrows unrelated errors unchanged', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(repository.updateProductVariant(variant)).rejects.toThrow(
+        'connection lost',
+      );
+    });
+  });
+
+  describe('deleteProductVariant', () => {
+    const deletedVariant = ProductVariant.restore({
+      ...variant,
+      deletedAt: new Date(),
+    });
+
+    it('soft-deletes and returns the mapped domain entity', async () => {
+      prisma.productVariant.update.mockResolvedValue({
+        id: deletedVariant.id,
+        sku: deletedVariant.sku,
+        price: deletedVariant.price,
+        stock: deletedVariant.stock,
+        disabled: deletedVariant.disabled,
+        attributes: deletedVariant.attributes,
+        createdAt: deletedVariant.createdAt,
+        updatedAt: deletedVariant.updatedAt,
+        deletedAt: deletedVariant.deletedAt,
+        productId: deletedVariant.productId,
+      });
+
+      const result = await repository.deleteProductVariant(deletedVariant);
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith({
+        where: { id: deletedVariant.id },
+        data: {
+          updatedAt: deletedVariant.updatedAt,
+          deletedAt: deletedVariant.deletedAt,
+        },
+      });
+      expect(result).toEqual(deletedVariant);
+    });
+
+    it('translates a record-not-found error into ProductVariantNotFoundError', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(
+        repository.deleteProductVariant(deletedVariant),
+      ).rejects.toThrow(ProductVariantNotFoundError);
+    });
+
+    it('rethrows unrelated errors unchanged', async () => {
+      prisma.productVariant.update.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(
+        repository.deleteProductVariant(deletedVariant),
+      ).rejects.toThrow('connection lost');
     });
   });
 });
