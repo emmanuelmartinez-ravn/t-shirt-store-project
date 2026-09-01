@@ -22,4 +22,9 @@ export class PrismaCartRepository extends CartRepository {
 
     return CartsPersistenceMapper.toDomain(record);
   }
+
+  async getCartByUserId(userId: string): Promise<Cart | null> {
+    const record = await this.prisma.cart.findUnique({ where: { userId } });
+    return record ? CartsPersistenceMapper.toDomain(record) : null;
+  }
 }
