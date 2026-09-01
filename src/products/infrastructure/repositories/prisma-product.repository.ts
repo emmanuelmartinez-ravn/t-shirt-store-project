@@ -143,13 +143,22 @@ export class PrismaProductRepository extends ProductRepository {
 
   async deleteProduct(product: Product): Promise<Product> {
     try {
-      const record = await this.prisma.product.update({
-        where: { id: product.id },
-        data: {
-          updatedAt: product.updatedAt,
-          deletedAt: product.deletedAt,
-        },
-      });
+      const [record] = await this.prisma.$transaction([
+        this.prisma.product.update({
+          where: { id: product.id },
+          data: {
+            updatedAt: product.updatedAt,
+            deletedAt: product.deletedAt,
+          },
+        }),
+        this.prisma.productVariant.updateMany({
+          where: { productId: product.id, deletedAt: null },
+          data: {
+            updatedAt: product.updatedAt,
+            deletedAt: product.deletedAt,
+          },
+        }),
+      ]);
 
       return ProductsPersistenceMapper.toDomain(record);
     } catch (error) {

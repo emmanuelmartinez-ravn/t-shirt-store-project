@@ -17,6 +17,10 @@ describe('PrismaProductRepository', () => {
       update: jest.Mock;
       findFirst: jest.Mock;
     };
+    productVariant: {
+      updateMany: jest.Mock;
+    };
+    $transaction: jest.Mock;
   };
 
   const product = Product.restore({
@@ -41,6 +45,10 @@ describe('PrismaProductRepository', () => {
         update: jest.fn(),
         findFirst: jest.fn(),
       },
+      productVariant: {
+        updateMany: jest.fn(),
+      },
+      $transaction: jest.fn(),
     };
     repository = new PrismaProductRepository(
       prisma as unknown as PrismaService,
@@ -525,7 +533,7 @@ describe('PrismaProductRepository', () => {
   describe('deleteProduct', () => {
     it('soft-deletes the product and returns the mapped domain entity', async () => {
       const deletedProduct = Product.delete(product);
-      prisma.product.update.mockResolvedValue({
+      const updatedRecord = {
         id: deletedProduct.id,
         name: deletedProduct.name,
         code: deletedProduct.code,
@@ -535,7 +543,10 @@ describe('PrismaProductRepository', () => {
         updatedAt: deletedProduct.updatedAt,
         deletedAt: deletedProduct.deletedAt,
         categoryId: deletedProduct.categoryId,
-      });
+      };
+      prisma.product.update.mockResolvedValue(updatedRecord);
+      prisma.productVariant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.$transaction.mockResolvedValue([updatedRecord, { count: 1 }]);
 
       const result = await repository.deleteProduct(deletedProduct);
 
@@ -549,8 +560,35 @@ describe('PrismaProductRepository', () => {
       expect(result).toEqual(deletedProduct);
     });
 
+    it('cascades the soft-delete to only the live variants of the product using the same timestamps', async () => {
+      const deletedProduct = Product.delete(product);
+      prisma.product.update.mockResolvedValue({
+        id: deletedProduct.id,
+        name: deletedProduct.name,
+        code: deletedProduct.code,
+        description: deletedProduct.description,
+        disabled: deletedProduct.disabled,
+        createdAt: deletedProduct.createdAt,
+        updatedAt: deletedProduct.updatedAt,
+        deletedAt: deletedProduct.deletedAt,
+        categoryId: deletedProduct.categoryId,
+      });
+      prisma.productVariant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.$transaction.mockResolvedValue([{}, { count: 1 }]);
+
+      await repository.deleteProduct(deletedProduct);
+
+      expect(prisma.productVariant.updateMany).toHaveBeenCalledWith({
+        where: { productId: deletedProduct.id, deletedAt: null },
+        data: {
+          updatedAt: deletedProduct.updatedAt,
+          deletedAt: deletedProduct.deletedAt,
+        },
+      });
+    });
+
     it('translates a record-not-found error into ProductNotFoundError', async () => {
-      prisma.product.update.mockRejectedValue(
+      prisma.$transaction.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Record not found', {
           code: 'P2025',
           clientVersion: '7.9.1',
@@ -563,7 +601,7 @@ describe('PrismaProductRepository', () => {
     });
 
     it('rethrows unrelated errors unchanged', async () => {
-      prisma.product.update.mockRejectedValue(new Error('connection lost'));
+      prisma.$transaction.mockRejectedValue(new Error('connection lost'));
 
       await expect(repository.deleteProduct(product)).rejects.toThrow(
         'connection lost',
