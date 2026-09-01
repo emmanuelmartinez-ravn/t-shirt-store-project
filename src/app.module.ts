@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
+import { LikedProductVariantsModule } from './liked-product-variants/liked-product-variants.module';
 import { UsersModule } from './users/users.module';
 import { getRedisConnectionOptions } from './mail/config/redis-connection';
 
@@ -23,6 +24,7 @@ import { getRedisConnectionOptions } from './mail/config/redis-connection';
     CategoriesModule,
     ProductsModule,
     ProductVariantsModule,
+    LikedProductVariantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

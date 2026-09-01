@@ -41,4 +41,11 @@ export class PrismaProductVariantRepository extends ProductVariantRepository {
       throw error;
     }
   }
+
+  async getProductVariantById(id: string): Promise<ProductVariant | null> {
+    const record = await this.prisma.productVariant.findUnique({
+      where: { id },
+    });
+    return record ? ProductVariantPersistenceMapper.toDomain(record) : null;
+  }
 }

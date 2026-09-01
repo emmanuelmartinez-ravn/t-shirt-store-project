@@ -175,6 +175,8 @@ model LikedProductVariant {
 
   productVariantId String         @map("product_variant_id")
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@unique([userId, productVariantId])
 }
 
 enum OrderStatus {
