@@ -6,7 +6,7 @@ import { MatchesProperty } from './validators/matches-property';
 
 export class UpdatePasswordDto {
   @ApiProperty({
-    description: "current password of the authenticated user's account",
+    description: "current password of the user's account",
     example: 'Secret1!',
   })
   @Transform(({ value }: { value: string }) => value.trim())

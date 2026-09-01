@@ -187,7 +187,7 @@ export class UsersController {
   @Patch('password')
   @HttpCode(HttpStatus.OK)
   @CheckPolicies(() => true)
-  @ApiOperation({ summary: "Change the authenticated user's password" })
+  @ApiOperation({ summary: "Change the user's password" })
   @ApiOkResponse({
     description: 'Updated user',
     type: UserResponseDto,
@@ -257,7 +257,7 @@ export class UsersController {
   @Patch('profile')
   @HttpCode(HttpStatus.OK)
   @CheckPolicies(() => true)
-  @ApiOperation({ summary: "Update the authenticated user's name" })
+  @ApiOperation({ summary: "Update the user's name" })
   @ApiOkResponse({
     description: 'Updated user',
     type: UserResponseDto,
