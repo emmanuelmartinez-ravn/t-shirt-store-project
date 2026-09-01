@@ -76,6 +76,26 @@ export class ProductVariant {
     return new ProductVariant(props);
   }
 
+  static update(
+    variant: ProductVariant,
+    props: { price: number; stock: number },
+  ): ProductVariant {
+    const now = new Date();
+
+    return new ProductVariant({
+      id: variant.id,
+      sku: variant.sku,
+      price: props.price,
+      stock: props.stock,
+      disabled: variant.disabled,
+      attributes: variant.attributes,
+      createdAt: variant.createdAt,
+      updatedAt: now,
+      deletedAt: variant.deletedAt,
+      productId: variant.productId,
+    });
+  }
+
   static generateSku(
     productCode: string,
     attributes: Record<string, string>,

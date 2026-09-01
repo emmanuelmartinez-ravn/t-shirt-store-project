@@ -62,6 +62,63 @@ describe('ProductVariant', () => {
     });
   });
 
+  describe('update', () => {
+    it('preserves id, sku, attributes, createdAt, disabled, deletedAt, and productId while applying the new price and stock', () => {
+      const variant = ProductVariant.restore({
+        id: 'variant-id',
+        sku: 'TS-000001-MED-BLU',
+        price: 19.99,
+        stock: 100,
+        disabled: false,
+        attributes: { size: 'medium', color: 'blue' },
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        productId: 'product-id',
+      });
+
+      const updated = ProductVariant.update(variant, {
+        price: 29.99,
+        stock: 50,
+      });
+
+      expect(updated.id).toBe(variant.id);
+      expect(updated.sku).toBe(variant.sku);
+      expect(updated.attributes).toBe(variant.attributes);
+      expect(updated.createdAt).toBe(variant.createdAt);
+      expect(updated.disabled).toBe(variant.disabled);
+      expect(updated.deletedAt).toBe(variant.deletedAt);
+      expect(updated.productId).toBe(variant.productId);
+      expect(updated.price).toBe(29.99);
+      expect(updated.stock).toBe(50);
+    });
+
+    it('bumps updatedAt', () => {
+      const variant = ProductVariant.restore({
+        id: 'variant-id',
+        sku: 'TS-000001-MED-BLU',
+        price: 19.99,
+        stock: 100,
+        disabled: false,
+        attributes: { size: 'medium', color: 'blue' },
+        createdAt: new Date('2025-12-01T00:00:00.000Z'),
+        updatedAt: new Date('2025-12-02T00:00:00.000Z'),
+        deletedAt: null,
+        productId: 'product-id',
+      });
+      const before = Date.now();
+
+      const updated = ProductVariant.update(variant, {
+        price: 29.99,
+        stock: 50,
+      });
+
+      const after = Date.now();
+      expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(updated.updatedAt.getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
   describe('restore', () => {
     it('rehydrates all fields as-is from persistence', () => {
       const props = {

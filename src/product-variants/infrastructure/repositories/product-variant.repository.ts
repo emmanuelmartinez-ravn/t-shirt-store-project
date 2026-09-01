@@ -14,4 +14,7 @@ export abstract class ProductVariantRepository {
     userId?: string;
   }): Promise<PaginatedResult<ProductVariant>>;
   abstract getProductVariantById(id: string): Promise<ProductVariant | null>;
+  abstract updateProductVariant(
+    variant: ProductVariant,
+  ): Promise<ProductVariant>;
 }

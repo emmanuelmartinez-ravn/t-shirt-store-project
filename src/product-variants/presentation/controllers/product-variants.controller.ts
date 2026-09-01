@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -17,6 +18,7 @@ import {
   ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -34,8 +36,10 @@ import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { CreateProductVariantUseCase } from '../../application/use-cases/create-product-variant.use-case';
 import { GetAllProductVariantsUseCase } from '../../application/use-cases/get-all-product-variants.use-case';
+import { UpdateProductVariantUseCase } from '../../application/use-cases/update-product-variant.use-case';
 import { CreateProductVariantDto } from '../dto/product-variant-create';
 import { ProductVariantResponseDto } from '../dto/product-variant-response';
+import { UpdateProductVariantDto } from '../dto/product-variant-update';
 import { ProductVariantResponseMapper } from '../mappers/product-variant-response.mapper';
 
 const MANAGER_ONLY_UNAUTHORIZED_RESPONSE = {
@@ -62,6 +66,7 @@ export class ProductVariantsController {
   constructor(
     private readonly createProductVariantUseCase: CreateProductVariantUseCase,
     private readonly getAllProductVariantsUseCase: GetAllProductVariantsUseCase,
+    private readonly updateProductVariantUseCase: UpdateProductVariantUseCase,
   ) {}
 
   @Post()
@@ -257,5 +262,45 @@ export class ProductVariantsController {
       ),
       pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
     };
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @ApiOperation({ summary: "Update a product variant's price and stock" })
+  @ApiOkResponse({
+    description: 'Updated product variant',
+    type: ProductVariantResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description: 'Product variant not found',
+    type: ErrorResponseDto,
+    example: { error: 'Product variant not found', details: [] },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: { InternalServerError: internalServerErrorExample },
+  })
+  public async updateProductVariant(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProductVariantDto,
+  ): Promise<ProductVariantResponseDto> {
+    const variant = await this.updateProductVariantUseCase.execute(id, {
+      price: dto.price,
+      stock: dto.stock,
+    });
+    return ProductVariantResponseMapper.toResponse(variant);
   }
 }
