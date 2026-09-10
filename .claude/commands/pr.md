@@ -7,6 +7,7 @@ Open a pull request for the current branch, following the conventions establishe
 
 1. Run `git status` and `git branch --show-current`. If there are uncommitted changes, stop and suggest running `/commit` first rather than pushing a dirty or partial state.
 2. Refuse to run this from `main` itself — a PR needs a feature branch. If currently on `main`, stop and ask which branch to use or whether to create one.
+2a. If currently on `claude-refactoring` (or any branch created from it), do NOT default the base to `main` — that branch is reserved for upgrades/refactoring, not features to ship. Stop and ask the user to explicitly confirm `main` (or name a different base) before proceeding.
 3. Check whether the branch is fully self-contained: does it depend on files, modules, or dependency changes that only exist uncommitted, or only on another branch? If the branch would fail to build/lint/test on its own when checked out fresh (e.g. code imports a module or package not present in this branch's own commit history), fix that first — don't open a PR for a branch that can't build.
 4. Run `pnpm lint`, `pnpm test`, and `pnpm build` locally as a sanity check before pushing.
 5. Push: `git push -u origin <branch>` if no upstream is set yet, otherwise `git push`.
