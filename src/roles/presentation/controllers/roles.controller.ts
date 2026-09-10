@@ -40,8 +40,6 @@ import { RolesResponseMapper } from '../mappers/roles-response.mapper';
 
 @ApiTags('roles')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PoliciesGuard)
-@CheckPolicies((ability) => ability.can(Action.Manage, 'Role'))
 @ApiUnauthorizedResponse({
   description: 'Missing, invalid, or expired access token',
   type: ErrorResponseDto,
@@ -68,6 +66,8 @@ export class RolesController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Create, 'Role'))
   @ApiOperation({ summary: 'Create a new role' })
   @ApiCreatedResponse({
     description: 'Created role',
@@ -114,6 +114,8 @@ export class RolesController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Read, 'Role'))
   @ApiOperation({ summary: 'Get all roles' })
   @ApiOkResponse({
     description: 'All roles',
@@ -131,6 +133,8 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Role'))
   @ApiOperation({ summary: 'Update a role' })
   @ApiOkResponse({
     description: 'Updated role',
@@ -186,6 +190,8 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Delete, 'Role'))
   @ApiOperation({ summary: 'Soft-delete a role' })
   @ApiOkResponse({
     description: 'Soft-deleted role',

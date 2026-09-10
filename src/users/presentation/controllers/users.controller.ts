@@ -44,8 +44,6 @@ import { UpdateProfileDto } from '../dto/update-profile';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PoliciesGuard)
-@CheckPolicies((ability) => ability.can(Action.Manage, 'User'))
 @ApiUnauthorizedResponse({
   description: 'Missing, invalid, or expired access token',
   type: ErrorResponseDto,
@@ -67,6 +65,8 @@ export class UsersController {
 
   @Post(':id/promotion')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: 'Promote a client user to manager' })
   @ApiOkResponse({
     description: 'Promoted user',
@@ -143,6 +143,8 @@ export class UsersController {
 
   @Patch(':id/disabled')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: "Toggle a user's disabled status" })
   @ApiOkResponse({
     description: 'Updated user',
@@ -186,6 +188,7 @@ export class UsersController {
 
   @Patch('password')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
   @CheckPolicies(() => true)
   @ApiOperation({ summary: "Change the user's password" })
   @ApiOkResponse({
@@ -256,6 +259,7 @@ export class UsersController {
 
   @Patch('profile')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
   @CheckPolicies(() => true)
   @ApiOperation({ summary: "Update the user's name" })
   @ApiOkResponse({
@@ -303,6 +307,8 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Delete, 'User'))
   @ApiOperation({ summary: 'Soft-delete a user' })
   @ApiOkResponse({
     description: 'Soft-deleted user',
@@ -354,6 +360,8 @@ export class UsersController {
 
   @Patch(':id/anonymize')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: "Anonymize a deleted user's data" })
   @ApiOkResponse({
     description: 'Anonymized user',
