@@ -18,11 +18,6 @@ export class CaslAbilityFactory {
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
 
     if (roleName === MANAGER_ROLE_NAME) {
-      can(Action.Manage, 'Role');
-      can(Action.Manage, 'User');
-      can(Action.Manage, 'Category');
-      can(Action.Manage, 'Product');
-
       can(Action.Create, 'Role');
       can(Action.Read, 'Role');
       can(Action.Update, 'Role');

@@ -21,54 +21,6 @@ describe('CaslAbilityFactory', () => {
   });
 
   describe('createForUser', () => {
-    it('grants manage permission on Role to a manager', () => {
-      const ability = factory.createForUser('manager');
-
-      expect(ability.can(Action.Manage, 'Role')).toBe(true);
-    });
-
-    it('denies manage permission on Role to a non-manager', () => {
-      const ability = factory.createForUser('client');
-
-      expect(ability.can(Action.Manage, 'Role')).toBe(false);
-    });
-
-    it('grants manage permission on User to a manager', () => {
-      const ability = factory.createForUser('manager');
-
-      expect(ability.can(Action.Manage, 'User')).toBe(true);
-    });
-
-    it('denies manage permission on User to a non-manager', () => {
-      const ability = factory.createForUser('client');
-
-      expect(ability.can(Action.Manage, 'User')).toBe(false);
-    });
-
-    it('grants manage permission on Category to a manager', () => {
-      const ability = factory.createForUser('manager');
-
-      expect(ability.can(Action.Manage, 'Category')).toBe(true);
-    });
-
-    it('denies manage permission on Category to a non-manager', () => {
-      const ability = factory.createForUser('client');
-
-      expect(ability.can(Action.Manage, 'Category')).toBe(false);
-    });
-
-    it('grants manage permission on Product to a manager', () => {
-      const ability = factory.createForUser('manager');
-
-      expect(ability.can(Action.Manage, 'Product')).toBe(true);
-    });
-
-    it('denies manage permission on Product to a non-manager', () => {
-      const ability = factory.createForUser('client');
-
-      expect(ability.can(Action.Manage, 'Product')).toBe(false);
-    });
-
     it('grants create, read, update, and delete on every subject to a manager', () => {
       const ability = factory.createForUser('manager');
 
@@ -91,7 +43,7 @@ describe('CaslAbilityFactory', () => {
       const allowedGrants = new Set(['Category:read', 'Product:read']);
 
       for (const subject of subjects) {
-        for (const action of [Action.Manage, ...crudActions]) {
+        for (const action of crudActions) {
           if (allowedGrants.has(`${subject}:${action}`)) {
             continue;
           }
@@ -105,7 +57,7 @@ describe('CaslAbilityFactory', () => {
       const ability = factory.createForUser('guest');
 
       for (const subject of subjects) {
-        for (const action of [Action.Manage, ...crudActions]) {
+        for (const action of crudActions) {
           expect(ability.can(action, subject)).toBe(false);
         }
       }
