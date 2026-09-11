@@ -71,7 +71,7 @@ export class CategoriesController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Category'))
+  @CheckPolicies((ability) => ability.can(Action.Create, 'Category'))
   @ApiOperation({ summary: 'Create a new category' })
   @ApiCreatedResponse({
     description: 'Created category',
@@ -177,7 +177,7 @@ export class CategoriesController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Category'))
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Category'))
   @ApiOperation({ summary: 'Update a category' })
   @ApiOkResponse({
     description: 'Updated category',
@@ -237,7 +237,7 @@ export class CategoriesController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Category'))
+  @CheckPolicies((ability) => ability.can(Action.Delete, 'Category'))
   @ApiOperation({ summary: 'Soft-delete a category' })
   @ApiOkResponse({
     description: 'Soft-deleted category',

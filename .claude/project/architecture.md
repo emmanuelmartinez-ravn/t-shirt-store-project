@@ -35,10 +35,10 @@ Before treating any change as done:
 
 ## Conventions
 
-- **Commit style**: plain Conventional Commits, **no scopes** — `feat:`, `fix:`, `chore:`, `test:`, `docs:` (never `feat(roles):`). Match `git log` for tone/verb choice. `/commit` (`.claude/commands/commit.md`) encodes this — prefer it over ad hoc git commands.
+- **Commit style**: plain Conventional Commits, **no scopes** — `feat:`, `fix:`, `chore:`, `test:`, `docs:` (never `feat(roles):`). Match `git log` for tone/verb choice. `/commit` (`.claude/skills/commit/SKILL.md`) encodes this — prefer it over ad hoc git commands.
 - **No Claude attribution**: never add a `Co-Authored-By: Claude` trailer to commits, or Claude attribution text to PR bodies.
 - **Dependency inversion boundary**: use-cases depend only on the domain's abstract repository class (e.g. `RoleRepository`), never on the concrete Prisma-backed adapter or on another domain's concrete classes. Wiring lives inline in `<domain>.module.ts` (`{ provide: RoleRepository, useClass: PrismaRoleRepository }`) — there's no separate DI-config file layer.
-- **PR flow**: feature branches off `main`, PR via `gh pr create --base main`, Summary + Test plan body. `/pr` (`.claude/commands/pr.md`) encodes this. Pushing directly to `main` is intentionally gated behind a confirmation prompt (see `.claude/settings.local.json`) — treat that friction as intentional, not a bug to route around.
+- **PR flow**: feature branches off `main`, PR via `gh pr create --base main`, Summary + Test plan body. `/pr` (`.claude/skills/pr/SKILL.md`) encodes this. Pushing directly to `main` is intentionally gated behind a confirmation prompt (see `.claude/settings.local.json`) — treat that friction as intentional, not a bug to route around.
 - **New domains**: copy the `roles` module's folder shape and layering exactly (see CLAUDE.md) — don't invent a new structure per domain.
 
 ## Don'ts

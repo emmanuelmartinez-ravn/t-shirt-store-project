@@ -1,6 +1,9 @@
 ---
-description: Stage and commit pending changes using this repo's conventions
+name: commit
+description: Stage and commit pending changes using this repo's conventions. Use when the user asks to "commit", "commit this", or runs `/commit`.
 argument-hint: [optional focus, e.g. "roles folder only" or "one commit per file"]
+metadata:
+  type: workflow
 ---
 
 Commit the repo's pending changes, following the conventions established in this project's history:
@@ -16,5 +19,6 @@ Commit the repo's pending changes, following the conventions established in this
 5. Each `git commit` here triggers the husky pre-commit hook (`pnpm lint && pnpm test`). Let it run — don't bypass with `--no-verify`. If it fails, fix the actual issue (or ask the user) rather than working around it.
 6. Never add a `Co-Authored-By: Claude` trailer or similar attribution to commit messages.
 7. After committing, run `git status` to confirm the working tree matches what you intended (nothing left over, nothing accidentally swept in).
+8. Push the branch to its remote: `git push -u origin <branch>` if no upstream is tracked yet, otherwise `git push`. If the current branch is `main`, skip this and tell the user instead — pushing directly to `main` bypasses review and needs their explicit confirmation first, same as `pr`'s handling of `main`.
 
 If the scope or grouping is genuinely ambiguous (e.g. changes span multiple unrelated concerns and it's unclear whether they belong on the same branch), ask before committing rather than guessing.
