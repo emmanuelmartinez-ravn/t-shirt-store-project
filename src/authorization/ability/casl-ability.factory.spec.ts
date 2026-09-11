@@ -4,7 +4,13 @@ import { AppSubjects, CaslAbilityFactory } from './casl-ability.factory';
 describe('CaslAbilityFactory', () => {
   let factory: CaslAbilityFactory;
 
-  const subjects: AppSubjects[] = ['Role', 'User', 'Category', 'Product'];
+  const subjects: AppSubjects[] = [
+    'Role',
+    'User',
+    'Category',
+    'Product',
+    'Promo',
+  ];
   const crudActions = [
     Action.Create,
     Action.Read,
@@ -31,16 +37,29 @@ describe('CaslAbilityFactory', () => {
       }
     });
 
-    it('grants read permission on category and product to a client', () => {
+    it('grants read permission on category, product, and promo to a client', () => {
       const ability = factory.createForUser('client');
 
       expect(ability.can(Action.Read, 'Category')).toBe(true);
       expect(ability.can(Action.Read, 'Product')).toBe(true);
+      expect(ability.can(Action.Read, 'Promo')).toBe(true);
     });
 
-    it('denies every action and subject combination to a client beyond reading category and product', () => {
+    it('denies create, update, and delete on promo to a client', () => {
       const ability = factory.createForUser('client');
-      const allowedGrants = new Set(['Category:read', 'Product:read']);
+
+      expect(ability.can(Action.Create, 'Promo')).toBe(false);
+      expect(ability.can(Action.Update, 'Promo')).toBe(false);
+      expect(ability.can(Action.Delete, 'Promo')).toBe(false);
+    });
+
+    it('denies every action and subject combination to a client beyond reading category, product, and promo', () => {
+      const ability = factory.createForUser('client');
+      const allowedGrants = new Set([
+        'Category:read',
+        'Product:read',
+        'Promo:read',
+      ]);
 
       for (const subject of subjects) {
         for (const action of crudActions) {

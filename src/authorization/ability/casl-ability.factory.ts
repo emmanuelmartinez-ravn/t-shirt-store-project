@@ -6,7 +6,8 @@ import {
 import { Injectable } from '@nestjs/common';
 import { Action } from './action.enum';
 
-export type AppSubjects = 'Role' | 'User' | 'Category' | 'Product' | 'all';
+export type AppSubjects =
+  'Role' | 'User' | 'Category' | 'Product' | 'Promo' | 'all';
 export type AppAbility = MongoAbility<[Action, AppSubjects]>;
 
 const MANAGER_ROLE_NAME = 'manager';
@@ -37,11 +38,17 @@ export class CaslAbilityFactory {
       can(Action.Read, 'Product');
       can(Action.Update, 'Product');
       can(Action.Delete, 'Product');
+
+      can(Action.Create, 'Promo');
+      can(Action.Read, 'Promo');
+      can(Action.Update, 'Promo');
+      can(Action.Delete, 'Promo');
     }
 
     if (roleName === CLIENT_ROLE_NAME) {
       can(Action.Read, 'Category');
       can(Action.Read, 'Product');
+      can(Action.Read, 'Promo');
     }
 
     return build();
