@@ -14,7 +14,7 @@ Picks up after a change is already implemented (by the user directly, or by `bac
 1. **Confirm there's something to work with.** Run `git status`. If nothing changed, say so and stop — there's no unit of work to submit.
 2. **Check the baseline.** Run `pnpm lint && pnpm test`. If both are already green, skip straight to step 4 — don't invoke a Ralph loop for work that doesn't need fixing.
 3. **If either failed, fix-and-retry via a Ralph loop** instead of manually looping tool calls in one turn — see "Fix-and-retry via Ralph Loop" below.
-4. **Commit.** Once lint and test are both green, follow `.claude/commands/commit.md` (`/commit`) exactly for staging and committing: logical grouping, this repo's Conventional Commits style, the "new dependency must be committed too" check, letting the husky pre-commit hook run uninterrupted, never `--no-verify`, and confirming `git status` afterward.
+4. **Commit.** Once lint and test are both green, follow `.claude/skills/commit/SKILL.md` (`/commit`) exactly for staging and committing: logical grouping, this repo's Conventional Commits style, the "new dependency must be committed too" check, letting the husky pre-commit hook run uninterrupted, never `--no-verify`, and confirming `git status` afterward.
 5. **Report** what got committed — or, if lint/test were already green with nothing to fix, note that and proceed straight to committing.
 
 ## Fix-and-retry via Ralph Loop
