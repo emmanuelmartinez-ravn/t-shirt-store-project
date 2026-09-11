@@ -122,17 +122,12 @@ export class PromosController {
   }
 
   @Get()
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Promo'))
   @ApiOperation({ summary: 'Get all promos' })
   @ApiOkResponse({
     description: 'All live (non-deleted) promos',
     type: PromoResponseDto,
     isArray: true,
   })
-  @ApiUnauthorizedResponse(UNAUTHORIZED_RESPONSE)
-  @ApiForbiddenResponse(FORBIDDEN_RESPONSE)
   @ApiInternalServerErrorResponse({
     description: 'Unexpected server error',
     type: ErrorResponseDto,
@@ -144,16 +139,11 @@ export class PromosController {
   }
 
   @Get('code/:code')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Promo'))
   @ApiOperation({ summary: 'Get a promo by code' })
   @ApiOkResponse({
     description: 'Live promo matching the given code',
     type: PromoResponseDto,
   })
-  @ApiUnauthorizedResponse(UNAUTHORIZED_RESPONSE)
-  @ApiForbiddenResponse(FORBIDDEN_RESPONSE)
   @ApiNotFoundResponse({
     description: 'Promo not found',
     type: ErrorResponseDto,
@@ -175,9 +165,6 @@ export class PromosController {
   }
 
   @Get(':id')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Read, 'Promo'))
   @ApiOperation({ summary: 'Get a promo by id' })
   @ApiOkResponse({
     description: 'Promo, whether live or soft-deleted',
@@ -191,8 +178,6 @@ export class PromosController {
       details: [],
     },
   })
-  @ApiUnauthorizedResponse(UNAUTHORIZED_RESPONSE)
-  @ApiForbiddenResponse(FORBIDDEN_RESPONSE)
   @ApiNotFoundResponse({
     description: 'Promo not found',
     type: ErrorResponseDto,
