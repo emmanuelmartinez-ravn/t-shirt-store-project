@@ -22,7 +22,7 @@ Owns the arc from "user wants a new endpoint" to "endpoint exists, is tested, an
    - Resource/domain name.
    - Which CRUD operations/HTTP verbs and routes are needed.
    - The field list and validation rules for request/response DTOs.
-   - The auth requirement per route — which CASL action/subject, or explicitly public (see `src/auth/`'s unguarded sign-up/sign-in routes for that precedent).
+   - The auth requirement per route — which CASL action/subject, or explicitly public (see `src/auth/`'s unguarded sign-up/sign-in routes for that precedent). **Never default `GET` routes to guarded just because the write routes are.** This repo has both shapes in active use (`src/categories/`/`src/products/` GETs are fully public with no guard at all; other domains guard reads too) — ask explicitly, per GET route, whether it should be open to any caller or require auth/a specific policy. Don't infer it from the write routes' policy.
    - Whether this is a brand-new top-level domain or an addition to an existing module.
 
 2. **Check for reuse first.** Grep `src/*` for an existing domain/module that already covers or overlaps this resource before assuming a new one is needed. A resource that's conceptually a sub-piece of an existing domain (e.g. another use-case/route on an existing controller) should extend that module, not spawn a parallel one.
@@ -40,6 +40,7 @@ Owns the arc from "user wants a new endpoint" to "endpoint exists, is tested, an
 ## Common pitfalls
 
 - Delegating to `backend-engineer` with only the user's original one-line ask — it has no memory of this conversation and will guess at routes, fields, or auth policy if not told explicitly.
+- Assuming `GET` routes should be guarded because the write routes are (or vice versa) instead of asking explicitly per route — this repo has public-GET domains (`categories`, `products`) and would-be-guarded-GET domains side by side, so there's no safe default to infer from.
 - Skipping the reuse check and creating a duplicate domain for something that belongs as an addition to an existing module.
 - Trusting `backend-engineer`'s or `test-engineer`'s self-reported "lint/test passed" instead of an independent final rerun.
 - Doing the implementation or test-writing yourself instead of delegating — this violates CLAUDE.md's explicit delegation mandate and duplicates `backend-engineer`/`test-engineer`'s own instructions.
