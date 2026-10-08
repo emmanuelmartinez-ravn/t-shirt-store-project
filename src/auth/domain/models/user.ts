@@ -129,6 +129,22 @@ export class User {
     });
   }
 
+  static changeAvatar(user: User, avatar: string): User {
+    return new User({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      hashedPassword: user.hashedPassword,
+      avatar,
+      disabled: user.disabled,
+      createdAt: user.createdAt,
+      updatedAt: new Date(),
+      deletedAt: user.deletedAt,
+      roleId: user.roleId,
+    });
+  }
+
   static setDisabled(user: User, disabled: boolean): User {
     return new User({
       id: user.id,
