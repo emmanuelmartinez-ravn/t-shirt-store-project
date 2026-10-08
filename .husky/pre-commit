@@ -1,2 +1,10 @@
+# Docs/config-only commits can't affect lint or test (see .husky/lib/non-code-only.sh),
+# so they skip both. Any code change runs the full checks. --no-renames lists both
+# sides of a rename, so moving a file out of src/ still counts as a code change.
+if git diff --cached --name-only --no-renames | sh .husky/lib/non-code-only.sh; then
+  echo "pre-commit: only docs/config staged - skipping lint and test"
+  exit 0
+fi
+
 pnpm lint
 pnpm test

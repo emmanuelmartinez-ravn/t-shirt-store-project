@@ -4,7 +4,7 @@
 
 - Unit tests: Jest + `ts-jest`, config lives inline in `package.json` (`rootDir: "src"`, `testRegex: ".*\\.spec\\.ts$"`). Every `*.spec.ts` under `src/` runs with `pnpm test`.
 - E2e tests: separate config at `test/jest-e2e.json`, run with `pnpm test:e2e`. Only the default Nest boilerplate exists so far (`test/app.e2e-spec.ts`, hits `GET /`) — no domain-specific e2e suite has been written yet. Note: `test/jest-e2e.json` is currently missing the `moduleNameMapper` that strips `.js` extensions from the generated Prisma client's imports (the unit-test config in `package.json` has it) — `pnpm test:e2e` will fail with a `SyntaxError: Unexpected token 'export'` until that's added.
-- The husky `pre-commit` hook runs `pnpm lint && pnpm test` on **every commit** — a spec file doesn't need to be staged for its failures to block a commit, since both commands run against the whole working tree.
+- The husky `pre-commit` hook runs `pnpm lint && pnpm test` on **every commit that stages a code file** — a spec file doesn't need to be staged for its failures to block such a commit, since both commands run against the whole working tree. Commits that stage only docs/Claude config (allowlist in `.husky/lib/non-code-only.sh`) skip both, so a docs-only commit will **not** surface a spec broken elsewhere in the working tree — don't read a green docs commit as "the tree passes".
 
 ## Test placement
 

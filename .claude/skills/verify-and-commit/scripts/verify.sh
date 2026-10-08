@@ -40,7 +40,20 @@ if [ -z "$(git status --porcelain)" ]; then
   fail "prereq-no-changes"
 fi
 
-# --- 2. Run lint and test, always both, capturing real exit codes ------
+# --- 2. Docs/config-only changes can't affect lint or test -------------
+#
+# Same classifier as the husky pre-commit hook (.husky/lib/non-code-only.sh).
+# --no-renames lists both sides of a rename; untracked files count too.
+
+if { git diff --name-only --no-renames HEAD; git ls-files --others --exclude-standard; } \
+  | sh .husky/lib/non-code-only.sh; then
+  echo "verify.sh: only docs/config changed — lint and test can't be affected, skipping"
+  echo ""
+  echo "VERIFY_RESULT=PASS:non-code-only"
+  exit 0
+fi
+
+# --- 3. Run lint and test, always both, capturing real exit codes ------
 #
 # Deliberately not short-circuited on a lint failure the way the husky
 # pre-commit hook is: every Ralph Loop iteration costs a full turn, so
@@ -56,7 +69,7 @@ echo "=== pnpm test ==="
 pnpm test
 test_status=$?
 
-# --- 3. Unambiguous, machine-checkable result line ----------------------
+# --- 4. Unambiguous, machine-checkable result line ----------------------
 
 echo ""
 if [ "$lint_status" -eq 0 ] && [ "$test_status" -eq 0 ]; then
