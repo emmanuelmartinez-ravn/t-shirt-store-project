@@ -3,6 +3,7 @@ import { User } from '../../../auth/domain/models/user';
 import { UserResponseMapper } from '../../../auth/presentation/mappers/user-response.mapper';
 import { AnonymizeUserUseCase } from '../../application/use-cases/anonymize-user.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
+import { GetUserAvatarUseCase } from '../../application/use-cases/get-user-avatar.use-case';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { ToggleUserDisabledUseCase } from '../../application/use-cases/toggle-user-disabled.use-case';
 import { UpdateAvatarUseCase } from '../../application/use-cases/update-avatar.use-case';
@@ -19,6 +20,7 @@ describe('UsersController', () => {
   let deleteUserUseCase: jest.Mocked<DeleteUserUseCase>;
   let anonymizeUserUseCase: jest.Mocked<AnonymizeUserUseCase>;
   let updateAvatarUseCase: jest.Mocked<UpdateAvatarUseCase>;
+  let getUserAvatarUseCase: jest.Mocked<GetUserAvatarUseCase>;
 
   beforeEach(() => {
     promoteUserToManagerUseCase = {
@@ -42,6 +44,9 @@ describe('UsersController', () => {
     updateAvatarUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UpdateAvatarUseCase>;
+    getUserAvatarUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetUserAvatarUseCase>;
 
     controller = new UsersController(
       promoteUserToManagerUseCase,
@@ -51,11 +56,51 @@ describe('UsersController', () => {
       deleteUserUseCase,
       anonymizeUserUseCase,
       updateAvatarUseCase,
+      getUserAvatarUseCase,
     );
   });
 
   it('is defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('getAvatar', () => {
+    const avatarResponse = {
+      avatarUrl: 'https://bucket.s3.amazonaws.com/avatars/user-id/avatar.jpg',
+      expiresIn: 3600,
+      isDefault: false,
+    };
+
+    it('passes the user id and a default avatar url built from the request host to the use case and returns its result', async () => {
+      const get = jest.fn().mockReturnValue('localhost:3000');
+      const req = { protocol: 'http', get } as unknown as Request;
+      getUserAvatarUseCase.execute.mockResolvedValue(avatarResponse);
+
+      const result = await controller.getAvatar('user-id', req);
+
+      expect(get).toHaveBeenCalledWith('host');
+      expect(getUserAvatarUseCase.execute).toHaveBeenCalledWith(
+        'user-id',
+        'http://localhost:3000/static/avatar_default.png',
+      );
+      expect(result).toBe(avatarResponse);
+    });
+
+    it('builds the default avatar url from whatever protocol and host the request carries', async () => {
+      const req = {
+        protocol: 'https',
+        get: jest.fn().mockReturnValue('api.example.com'),
+      } as unknown as Request;
+      getUserAvatarUseCase.execute.mockResolvedValue(avatarResponse);
+
+      const result = await controller.getAvatar('user-id', req);
+
+      expect(getUserAvatarUseCase.execute).toHaveBeenCalledWith(
+        'user-id',
+        'https://api.example.com/static/avatar_default.png',
+      );
+      expect(result).toBe(avatarResponse);
+    });
   });
 
   describe('promote', () => {

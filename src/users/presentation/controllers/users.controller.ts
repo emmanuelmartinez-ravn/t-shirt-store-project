@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -41,6 +42,7 @@ import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { AnonymizeUserUseCase } from '../../application/use-cases/anonymize-user.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
+import { GetUserAvatarUseCase } from '../../application/use-cases/get-user-avatar.use-case';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { ToggleUserDisabledUseCase } from '../../application/use-cases/toggle-user-disabled.use-case';
 import { UpdateAvatarUseCase } from '../../application/use-cases/update-avatar.use-case';
@@ -49,21 +51,15 @@ import { UpdateProfileUseCase } from '../../application/use-cases/update-profile
 import { UpdateAvatarResponseDto } from '../dto/update-avatar-response';
 import { UpdatePasswordDto } from '../dto/update-password';
 import { UpdateProfileDto } from '../dto/update-profile';
+import { UserAvatarResponseDto } from '../dto/user-avatar-response';
 import {
   AVATAR_IMAGE_FIELD,
   AvatarImageInterceptor,
 } from '../interceptors/avatar-image.interceptor';
 
+const DEFAULT_AVATAR_PATH = 'static/avatar_default.png';
+
 @ApiTags('users')
-@ApiBearerAuth()
-@ApiUnauthorizedResponse({
-  description: 'Missing, invalid, or expired access token',
-  type: ErrorResponseDto,
-  example: {
-    error: 'Invalid or expired token',
-    details: [],
-  },
-})
 @Controller('users')
 export class UsersController {
   constructor(
@@ -74,11 +70,89 @@ export class UsersController {
     private readonly deleteUserUseCase: DeleteUserUseCase,
     private readonly anonymizeUserUseCase: AnonymizeUserUseCase,
     private readonly updateAvatarUseCase: UpdateAvatarUseCase,
+    private readonly getUserAvatarUseCase: GetUserAvatarUseCase,
   ) {}
+
+  @Get(':id/avatar')
+  @ApiOperation({
+    summary: "Get a user's avatar URL",
+    description:
+      'Public endpoint. Returns a time-limited presigned URL to the uploaded ' +
+      'avatar, or the URL of the default avatar image if the user has not ' +
+      'uploaded one (in which case expiresIn is null).',
+  })
+  @ApiOkResponse({
+    description: 'Avatar URL for the user',
+    type: UserAvatarResponseDto,
+    examples: {
+      CustomAvatar: {
+        summary: 'User has uploaded an avatar',
+        value: {
+          avatarUrl:
+            'https://tshirt-store-avatars.s3.us-east-1.amazonaws.com/avatars/3f6a7c9e-8b1a-4b3a-9f1e-1a2b3c4d5e6f/0b8f2c1e-4d3a-4e5f-9a1b-2c3d4e5f6a7b.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600',
+          expiresIn: 3600,
+          isDefault: false,
+        },
+      },
+      DefaultAvatar: {
+        summary: 'User has not uploaded an avatar',
+        value: {
+          avatarUrl: 'http://localhost:3000/static/avatar_default.png',
+          expiresIn: null,
+          isDefault: true,
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found or deleted',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error, e.g. presigning the URL failed',
+    type: ErrorResponseDto,
+    examples: {
+      AvatarFetchFailed: {
+        summary: 'Avatar URL could not be generated',
+        value: {
+          error: 'Failed to get avatar',
+          details: [],
+        },
+      },
+    },
+  })
+  public async getAvatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ): Promise<UserAvatarResponseDto> {
+    const defaultAvatarUrl = `${req.protocol}://${req.get('host')}/${DEFAULT_AVATAR_PATH}`;
+    return this.getUserAvatarUseCase.execute(id, defaultAvatarUrl);
+  }
 
   @Post(':id/promotion')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: 'Promote a client user to manager' })
   @ApiOkResponse({
@@ -157,6 +231,15 @@ export class UsersController {
   @Patch(':id/disabled')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: "Toggle a user's disabled status" })
   @ApiOkResponse({
@@ -202,6 +285,15 @@ export class UsersController {
   @Patch('password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies(() => true)
   @ApiOperation({ summary: "Change the user's password" })
   @ApiOkResponse({
@@ -273,6 +365,15 @@ export class UsersController {
   @Patch('avatar')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies(() => true)
   @UseInterceptors(AvatarImageInterceptor)
   @ApiOperation({
@@ -394,6 +495,15 @@ export class UsersController {
   @Patch('profile')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies(() => true)
   @ApiOperation({ summary: "Update the user's name" })
   @ApiOkResponse({
@@ -442,6 +552,15 @@ export class UsersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies((ability) => ability.can(Action.Delete, 'User'))
   @ApiOperation({ summary: 'Soft-delete a user' })
   @ApiOkResponse({
@@ -495,6 +614,15 @@ export class UsersController {
   @Patch(':id/anonymize')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @ApiBearerAuth()
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Invalid or expired token',
+      details: [],
+    },
+  })
   @CheckPolicies((ability) => ability.can(Action.Update, 'User'))
   @ApiOperation({ summary: "Anonymize a deleted user's data" })
   @ApiOkResponse({
