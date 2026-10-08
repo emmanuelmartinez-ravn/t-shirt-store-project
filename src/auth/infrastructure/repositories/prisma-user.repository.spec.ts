@@ -318,6 +318,46 @@ describe('PrismaUserRepository', () => {
     });
   });
 
+  describe('updateAvatar', () => {
+    it('persists only the avatar key and returns the mapped domain entity', async () => {
+      const updatedUser = User.changeAvatar(user, 'avatars/user-id/new.jpg');
+      prisma.user.update.mockResolvedValue({
+        id: updatedUser.id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        hashedPassword: updatedUser.hashedPassword,
+        avatar: updatedUser.avatar,
+        disabled: updatedUser.disabled,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+        deletedAt: null,
+        roleId: updatedUser.roleId,
+      });
+
+      const result = await repository.updateAvatar(updatedUser);
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: updatedUser.id },
+        data: {
+          avatar: 'avatars/user-id/new.jpg',
+          updatedAt: updatedUser.updatedAt,
+        },
+      });
+      expect(result).toEqual(updatedUser);
+    });
+
+    it('propagates persistence errors unchanged', async () => {
+      prisma.user.update.mockRejectedValue(new Error('connection lost'));
+
+      await expect(
+        repository.updateAvatar(
+          User.changeAvatar(user, 'avatars/user-id/new.jpg'),
+        ),
+      ).rejects.toThrow('connection lost');
+    });
+  });
+
   describe('deleteUser', () => {
     it('soft-deletes the user and returns the mapped domain entity', async () => {
       const deletedUser = User.delete(user);
