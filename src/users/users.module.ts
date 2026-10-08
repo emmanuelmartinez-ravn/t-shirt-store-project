@@ -7,6 +7,7 @@ import { RolesModule } from '../roles/roles.module';
 import { StorageModule } from '../storage/storage.module';
 import { AnonymizeUserUseCase } from './application/use-cases/anonymize-user.use-case';
 import { DeleteUserUseCase } from './application/use-cases/delete-user.use-case';
+import { GetUserAvatarUseCase } from './application/use-cases/get-user-avatar.use-case';
 import { PromoteUserToManagerUseCase } from './application/use-cases/promote-user-to-manager.use-case';
 import { ToggleUserDisabledUseCase } from './application/use-cases/toggle-user-disabled.use-case';
 import { UpdateAvatarUseCase } from './application/use-cases/update-avatar.use-case';
@@ -25,6 +26,7 @@ import { UsersController } from './presentation/controllers/users.controller';
     DeleteUserUseCase,
     AnonymizeUserUseCase,
     UpdateAvatarUseCase,
+    GetUserAvatarUseCase,
     JwtAuthGuard,
     PoliciesGuard,
   ],
