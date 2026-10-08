@@ -2,6 +2,7 @@ import { Request } from 'express';
 import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { Product } from '../../domain/models/product';
 import { CreateProductUseCase } from '../../application/use-cases/create-product.use-case';
+import { DeleteProductImageUseCase } from '../../application/use-cases/delete-product-image.use-case';
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
@@ -21,6 +22,7 @@ describe('ProductsController', () => {
   let deleteProductUseCase: jest.Mocked<DeleteProductUseCase>;
   let toggleProductDisabledUseCase: jest.Mocked<ToggleProductDisabledUseCase>;
   let uploadProductImagesUseCase: jest.Mocked<UploadProductImagesUseCase>;
+  let deleteProductImageUseCase: jest.Mocked<DeleteProductImageUseCase>;
   let req: Request;
 
   const product = Product.restore({
@@ -91,6 +93,9 @@ describe('ProductsController', () => {
     uploadProductImagesUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UploadProductImagesUseCase>;
+    deleteProductImageUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<DeleteProductImageUseCase>;
     req = buildRequest();
 
     controller = new ProductsController(
@@ -101,6 +106,7 @@ describe('ProductsController', () => {
       deleteProductUseCase,
       toggleProductDisabledUseCase,
       uploadProductImagesUseCase,
+      deleteProductImageUseCase,
     );
   });
 
@@ -335,6 +341,64 @@ describe('ProductsController', () => {
       uploadProductImagesUseCase.execute.mockRejectedValue(failure);
 
       await expect(controller.uploadImages('product-id', files)).rejects.toBe(
+        failure,
+      );
+    });
+  });
+
+  describe('deleteImage', () => {
+    it('delegates to the use case with the image id and the default image url, and returns the mapped remaining images', async () => {
+      deleteProductImageUseCase.execute.mockResolvedValue({
+        images: uploadedImages,
+      });
+
+      const result = await controller.deleteImage('image-id', req);
+
+      expect(deleteProductImageUseCase.execute).toHaveBeenCalledWith(
+        'image-id',
+        defaultImageUrl,
+      );
+      expect(result).toEqual({
+        images: uploadedImages.map((image) =>
+          ProductsResponseMapper.toImageResponse(image),
+        ),
+      });
+    });
+
+    it('returns the mapped default image when no images remain', async () => {
+      deleteProductImageUseCase.execute.mockResolvedValue({
+        images: defaultImages,
+      });
+
+      const result = await controller.deleteImage('image-id', req);
+
+      expect(result).toEqual({
+        images: [ProductsResponseMapper.toImageResponse(defaultImages[0])],
+      });
+    });
+
+    it('builds the default image url from the request protocol and host', async () => {
+      deleteProductImageUseCase.execute.mockResolvedValue({ images: [] });
+
+      await controller.deleteImage(
+        'image-id',
+        buildRequest({
+          protocol: 'https',
+          get: jest.fn(() => 'api.example.com'),
+        }),
+      );
+
+      expect(deleteProductImageUseCase.execute).toHaveBeenCalledWith(
+        'image-id',
+        'https://api.example.com/static/product_default.png',
+      );
+    });
+
+    it('propagates use case errors', async () => {
+      const failure = new Error('delete failed');
+      deleteProductImageUseCase.execute.mockRejectedValue(failure);
+
+      await expect(controller.deleteImage('image-id', req)).rejects.toBe(
         failure,
       );
     });
