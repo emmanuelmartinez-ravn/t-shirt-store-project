@@ -9,20 +9,26 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiGoneResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiPayloadTooLargeResponse,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Action } from '../../../authorization/ability/action.enum';
@@ -37,10 +43,16 @@ import { AnonymizeUserUseCase } from '../../application/use-cases/anonymize-user
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { ToggleUserDisabledUseCase } from '../../application/use-cases/toggle-user-disabled.use-case';
+import { UpdateAvatarUseCase } from '../../application/use-cases/update-avatar.use-case';
 import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
+import { UpdateAvatarResponseDto } from '../dto/update-avatar-response';
 import { UpdatePasswordDto } from '../dto/update-password';
 import { UpdateProfileDto } from '../dto/update-profile';
+import {
+  AVATAR_IMAGE_FIELD,
+  AvatarImageInterceptor,
+} from '../interceptors/avatar-image.interceptor';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -61,6 +73,7 @@ export class UsersController {
     private readonly updateProfileUseCase: UpdateProfileUseCase,
     private readonly deleteUserUseCase: DeleteUserUseCase,
     private readonly anonymizeUserUseCase: AnonymizeUserUseCase,
+    private readonly updateAvatarUseCase: UpdateAvatarUseCase,
   ) {}
 
   @Post(':id/promotion')
@@ -255,6 +268,127 @@ export class UsersController {
       newPassword: dto.newPassword,
     });
     return UserResponseMapper.toResponse(user);
+  }
+
+  @Patch('avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies(() => true)
+  @UseInterceptors(AvatarImageInterceptor)
+  @ApiOperation({
+    summary: "Upload or replace the user's avatar image",
+    description:
+      'Accepts a square PNG or JPEG between 512x512 and 1024x1024, up to 2 MB. ' +
+      'The image is resized to 512x512 JPEG and stored privately; the response ' +
+      'contains a time-limited presigned URL to it.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: [AVATAR_IMAGE_FIELD],
+      properties: {
+        [AVATAR_IMAGE_FIELD]: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Square PNG or JPEG image, 512x512 to 1024x1024, <= 2 MB',
+        },
+      },
+    },
+  })
+  @ApiOkResponse({
+    description: 'Presigned URL for the new avatar',
+    type: UpdateAvatarResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Image missing, not 1:1, or outside the allowed dimensions',
+    type: ErrorResponseDto,
+    examples: {
+      ImageRequired: {
+        summary: 'No file was sent in the image field',
+        value: {
+          error: 'Image file is required',
+          details: [],
+        },
+      },
+      InvalidAspectRatio: {
+        summary: 'Image is not square',
+        value: {
+          error: 'Image must have a 1:1 aspect ratio',
+          details: ['Received 800x600'],
+        },
+      },
+      TooLarge: {
+        summary: 'Image is larger than 1024x1024',
+        value: {
+          error: 'Image dimensions must not exceed 1024x1024',
+          details: ['Received 2048x2048'],
+        },
+      },
+      TooSmall: {
+        summary: 'Image is smaller than 512x512',
+        value: {
+          error: 'Image dimensions must be at least 512x512',
+          details: ['Received 256x256'],
+        },
+      },
+    },
+  })
+  @ApiPayloadTooLargeResponse({
+    description: 'Image file exceeds 2 MB',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Image must be 2 MB or smaller',
+      details: [],
+    },
+  })
+  @ApiUnsupportedMediaTypeResponse({
+    description: 'Image is not a readable PNG or JPEG',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Unsupported image format',
+      details: ['Accepted formats: png, jpg, jpeg'],
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User not found',
+      details: [],
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user is disabled',
+    type: ErrorResponseDto,
+    example: {
+      error: 'User is disabled',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error, e.g. the storage upload failed',
+    type: ErrorResponseDto,
+    examples: {
+      AvatarUpdateFailed: {
+        summary: 'Avatar could not be stored or saved',
+        value: {
+          error: 'Failed to update avatar',
+          details: [],
+        },
+      },
+      InternalServerError: internalServerErrorExample,
+    },
+  })
+  public async updateAvatar(
+    @Req() req: Request,
+    @UploadedFile() image: Express.Multer.File | undefined,
+  ): Promise<UpdateAvatarResponseDto> {
+    return this.updateAvatarUseCase.execute(
+      req.user!.sub,
+      image ? { buffer: image.buffer, size: image.size } : undefined,
+    );
   }
 
   @Patch('profile')

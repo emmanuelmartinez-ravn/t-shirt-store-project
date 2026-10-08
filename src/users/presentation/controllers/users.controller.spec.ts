@@ -5,6 +5,7 @@ import { AnonymizeUserUseCase } from '../../application/use-cases/anonymize-user
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
 import { PromoteUserToManagerUseCase } from '../../application/use-cases/promote-user-to-manager.use-case';
 import { ToggleUserDisabledUseCase } from '../../application/use-cases/toggle-user-disabled.use-case';
+import { UpdateAvatarUseCase } from '../../application/use-cases/update-avatar.use-case';
 import { UpdatePasswordUseCase } from '../../application/use-cases/update-password.use-case';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case';
 import { UsersController } from './users.controller';
@@ -17,6 +18,7 @@ describe('UsersController', () => {
   let updateProfileUseCase: jest.Mocked<UpdateProfileUseCase>;
   let deleteUserUseCase: jest.Mocked<DeleteUserUseCase>;
   let anonymizeUserUseCase: jest.Mocked<AnonymizeUserUseCase>;
+  let updateAvatarUseCase: jest.Mocked<UpdateAvatarUseCase>;
 
   beforeEach(() => {
     promoteUserToManagerUseCase = {
@@ -37,6 +39,9 @@ describe('UsersController', () => {
     anonymizeUserUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<AnonymizeUserUseCase>;
+    updateAvatarUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UpdateAvatarUseCase>;
 
     controller = new UsersController(
       promoteUserToManagerUseCase,
@@ -45,6 +50,7 @@ describe('UsersController', () => {
       updateProfileUseCase,
       deleteUserUseCase,
       anonymizeUserUseCase,
+      updateAvatarUseCase,
     );
   });
 
@@ -224,6 +230,53 @@ describe('UsersController', () => {
 
       expect(anonymizeUserUseCase.execute).toHaveBeenCalledWith('user-id');
       expect(result).toEqual(UserResponseMapper.toResponse(user));
+    });
+  });
+
+  describe('updateAvatar', () => {
+    const req = {
+      user: {
+        sub: 'user-id',
+        email: 'joe.doe@example.com',
+        role: 'client',
+        roleId: 'role-id',
+      },
+    } as unknown as Request;
+    const avatarResponse = {
+      avatarUrl: 'https://bucket.s3.amazonaws.com/avatars/user-id/new.jpg',
+      expiresIn: 3600,
+    };
+
+    it('passes the authenticated user id and the uploaded bytes to the use case and returns its result', async () => {
+      const buffer = Buffer.from('image-bytes');
+      const file = {
+        fieldname: 'image',
+        originalname: 'avatar.png',
+        mimetype: 'image/png',
+        buffer,
+        size: buffer.length,
+      } as Express.Multer.File;
+      updateAvatarUseCase.execute.mockResolvedValue(avatarResponse);
+
+      const result = await controller.updateAvatar(req, file);
+
+      expect(updateAvatarUseCase.execute).toHaveBeenCalledWith('user-id', {
+        buffer,
+        size: buffer.length,
+      });
+      expect(result).toBe(avatarResponse);
+    });
+
+    it('passes undefined to the use case when no file was uploaded', async () => {
+      updateAvatarUseCase.execute.mockResolvedValue(avatarResponse);
+
+      const result = await controller.updateAvatar(req, undefined);
+
+      expect(updateAvatarUseCase.execute).toHaveBeenCalledWith(
+        'user-id',
+        undefined,
+      );
+      expect(result).toBe(avatarResponse);
     });
   });
 });
