@@ -33,4 +33,12 @@ export class SharpImageProcessorService extends ImageProcessorService {
       .jpeg()
       .toBuffer();
   }
+
+  async normalize(image: Buffer, format: 'png' | 'jpeg'): Promise<Buffer> {
+    const oriented = sharp(image).rotate();
+
+    return format === 'png'
+      ? oriented.png().toBuffer()
+      : oriented.jpeg().toBuffer();
+  }
 }
