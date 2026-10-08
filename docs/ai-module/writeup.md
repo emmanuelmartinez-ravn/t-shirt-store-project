@@ -1,0 +1,38 @@
+# AI Module: `verify-and-commit` and `add-endpoint`
+
+This repo's two orchestration skills — the tail-end verify+commit gate and the front-half endpoint scaffolder — reviewed, fixed, and evidenced here per GitHub issue #52 ("AI module review: clarify skill decisions and fix unintended pushing") and `plans/issue-52-ai-module-skills-review.md`.
+
+## Starting commit
+
+`07836be` ("feat: repository setup") — the repo's first commit, before either skill existed.
+
+- `do-work` (renamed `verify-and-commit` as part of this work) was introduced at `0a4e717` ("chore: add do-work and writing-prds skills, extend writing-skills").
+- `add-endpoint` was introduced at `3716082` ("chore: add add-endpoint orchestration skill").
+
+## Each skill's contribution
+
+**`verify-and-commit`** (formerly `do-work`) is the tail-end of a task: it takes an already-implemented change, runs a scripted lint+test gate (`.claude/skills/verify-and-commit/scripts/verify.sh`), drives a bounded Ralph-Loop fix cycle when that gate fails, and — only on a fresh, scripted `PASS` — commits per `.claude/skills/commit/SKILL.md`'s conventions. It never pushes or opens a PR; that's `/pr`, invoked separately with explicit authorization.
+
+**`add-endpoint`** is the front half: given a request for a new or extended REST endpoint, it gathers every decision an implementing agent can't infer on its own — per-route access (public / CASL-checked+subject-registration / ownership-checked), the Prisma model reuse-vs-extend-vs-create decision, ownership/cardinality — into a single YAML delegation contract, hands that to an implementing agent (`backend-engineer`/`test-engineer` by default, or the opt-in `implementer`/`reviewer` trial), independently re-verifies (lint/build/test, plus a triggered smoke test and a port-3000 conflict check), and stops at a verified-but-uncommitted state.
+
+## Failure/success evidence
+
+**The `promos` incident** is the concrete case that motivated most of this work. The `promos` domain was originally built by `backend-engineer` (orchestrated by `add-endpoint`) with all three GET routes wrongly guarded (`@UseGuards`/`@CheckPolicies`/`@ApiBearerAuth()`), fixed in commit `9740abc` ("fix: make promos GET routes public") by deleting those decorators to match the public-catalog pattern already established by `categories`/`products`. Commit `b70f2d9` ("docs: require asking per-GET auth visibility in add-endpoint skill"), landed immediately before the fix, was a first remediation attempt — prose telling the orchestrator to "ask" — that did not, on its own, prevent the defect it was trying to fix; a structural mechanism was needed instead. This PRD's §3 (add-endpoint's forced three-way access classification and delegation contract) is that structural fix.
+
+**A second, source-only defect**: `do-work`'s own text promised it would never push, but its commit step deferred to `/commit` "exactly," and `/commit`'s step 8 pushed — a genuine contradiction that could have pushed a commit-only request without authorization. No push was ever actually executed by this path (source finding only), and this work removed the push step from `/commit` entirely (`/pr` already pushes independently, so nothing was lost) rather than leaving it as a live risk.
+
+**Verifying the push fix, not just asserting it**: rather than trust the fixed skill text, an isolated local sandbox (a throwaway bare repo standing in for "the remote," never the real GitHub origin) was used to demonstrate the actual invariant: a commit-only flow left the sandbox remote's ref for a new branch completely absent (`git ls-remote` returned nothing), while a subsequent push step advanced that ref to exactly match the local commit's SHA. See `plans/issue-52-ai-module-skills-review.md` for the reproduction script.
+
+**Verifying the scripted gate, not just describing it**: `verify.sh` was run against three deliberately broken states — a lint-only violation, a test-only failure, and the clean-fix state — and correctly reported `VERIFY_RESULT=FAIL:lint`, `VERIFY_RESULT=FAIL:test`, and `VERIFY_RESULT=PASS` respectively, with matching process exit codes, before any of the scratch breakage was left in the tree.
+
+**The implementer/reviewer trial** (issue #52's proposed alternative to `backend-engineer`/`test-engineer`) was designed and actually run once, against a small representative feature (`newsletter-subscriptions`, deliberately shaped like `promos`: a mixed public/CASL-guarded route set), each mode in its own isolated git worktree from the same base commit. Both modes correctly resolved every route's access shape identically — meaning the §3 fix already prevents a `promos`-shaped recurrence regardless of delegation mode. The trial's actual finding was different and unplanned: both implementers independently chose the same incomplete schema (no real uniqueness constraint backing the contract's required 409-on-duplicate-email behavior) and described it in their handoff as "matching existing convention." Only the `reviewed` mode's `reviewer` — deliberately given the contract and the diff rather than the implementer's own narrative — verified that claim against the actual schema and caught that the required migration didn't exist, while `split` mode's `test-engineer` wrote correct tests against the mocked implementation and reported no gaps. Full comparison, including one correction made to the reviewer's own supporting claim after independent verification, is in `docs/ai-module/delegation-mode-comparison.md`. `split` remains `add-endpoint`'s default; the trial informs, but doesn't decide, whether `reviewed` should ever change that.
+
+## Fresh-session runs
+
+Both skills were exercised in genuinely fresh sessions — new agents with no memory of the work that built them — after every fix above was implemented, each against an isolated sandbox worktree so a fresh agent's actions couldn't touch this repo's real pending changes or its real GitHub remote.
+
+**`verify-and-commit`**: given a pending change and told to "wrap up this task," a fresh agent discovered the renamed skill on its own, hit a missing local Prisma-client-generation prerequisite (unrelated to this PRD — fixed by running `pnpm prisma generate`), then ran `verify.sh` to a fresh `VERIFY_RESULT=PASS` (86 suites / 557 tests) and committed the pending work as a single logical commit (`73fe238`) — correctly identifying it as one coherent unit. It did not push. Independently verified afterward: `git ls-remote origin "refs/heads/sandbox/*"` against the real remote returned nothing, and the local branch had no upstream tracking configured — confirming the commit never left the sandbox, not merely trusting the agent's own report.
+
+**`add-endpoint`**: given a plain-language request for a new public `GET /categories/count` endpoint, a fresh agent discovered the skill, correctly classified the route as public (matching `categories`' existing public-GET precedent), delegated through the default `split` mode (`backend-engineer` → `test-engineer`), independently re-verified (lint/build/test: 87 suites / 563 tests), and — per the new trigger-based smoke-test rule — started the app on a non-default port, confirmed `/categories/count`'s route registration ordered ahead of `/categories/:id` (so the UUID-parsing route doesn't swallow it), and killed the process afterward. It stopped at a verified-but-uncommitted state and correctly pointed to `verify-and-commit` (its new name) as the next step, rather than committing itself.
+
+Both demo worktrees and their branches were deleted after evidence was captured; nothing from either demo was merged or pushed anywhere.

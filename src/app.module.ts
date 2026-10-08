@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { LikedProductVariantsModule } from './liked-product-variants/liked-product-variants.module';
 import { CartItemsModule } from './cart-items/cart-items.module';
+import { PromosModule } from './promos/promos.module';
 import { UsersModule } from './users/users.module';
 import { getRedisConnectionOptions } from './mail/config/redis-connection';
 
@@ -25,6 +26,7 @@ import { getRedisConnectionOptions } from './mail/config/redis-connection';
     ProductVariantsModule,
     LikedProductVariantsModule,
     CartItemsModule,
+    PromosModule,
   ],
 })
 export class AppModule {}

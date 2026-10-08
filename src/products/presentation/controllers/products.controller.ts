@@ -82,7 +82,7 @@ export class ProductsController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Create, 'Product'))
   @ApiOperation({ summary: 'Create a new product' })
   @ApiCreatedResponse({
     description: 'Created product',
@@ -284,7 +284,7 @@ export class ProductsController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
   @ApiOperation({ summary: 'Update a product' })
   @ApiOkResponse({
     description: 'Updated product',
@@ -360,7 +360,7 @@ export class ProductsController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Delete, 'Product'))
   @ApiOperation({ summary: 'Soft-delete a product' })
   @ApiOkResponse({
     description: 'Soft-deleted product',
@@ -408,7 +408,7 @@ export class ProductsController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
   @ApiOperation({ summary: "Toggle a product's disabled status" })
   @ApiOkResponse({
     description: 'Updated product',

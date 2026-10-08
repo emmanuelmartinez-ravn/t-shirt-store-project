@@ -76,7 +76,7 @@ export class ProductVariantsController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Create, 'Product'))
   @ApiOperation({ summary: 'Create a new product variant' })
   @ApiCreatedResponse({
     description: 'Created product variant',
@@ -271,7 +271,7 @@ export class ProductVariantsController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
   @ApiOperation({ summary: "Update a product variant's price and stock" })
   @ApiOkResponse({
     description: 'Updated product variant',
@@ -311,7 +311,7 @@ export class ProductVariantsController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, PoliciesGuard)
-  @CheckPolicies((ability) => ability.can(Action.Manage, 'Product'))
+  @CheckPolicies((ability) => ability.can(Action.Delete, 'Product'))
   @ApiOperation({ summary: 'Soft-delete a product variant' })
   @ApiOkResponse({
     description: 'Soft-deleted product variant',
