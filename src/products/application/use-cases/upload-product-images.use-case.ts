@@ -8,7 +8,6 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { getSignedUrlTtlSeconds } from '../../../storage/config/signed-url-ttl';
 import { UnreadableImageError } from '../../../storage/errors/unreadable-image';
 import { FileStorageService } from '../../../storage/services/file-storage.service';
 import { ImageProcessorService } from '../../../storage/services/image-processor.service';
@@ -32,6 +31,7 @@ import {
   PRODUCT_MAX_IMAGES,
   ProductImageFormat,
 } from '../config/product-image-constraints';
+import { ProductImageUrlsService } from '../services/product-image-urls.service';
 import { ProductImageUrl } from '../types/product-image-url';
 
 export interface ProductImageUpload {
@@ -49,6 +49,7 @@ export class UploadProductImagesUseCase {
     private readonly productImageRepository: ProductImageRepository,
     private readonly fileStorageService: FileStorageService,
     private readonly imageProcessorService: ImageProcessorService,
+    private readonly productImageUrlsService: ProductImageUrlsService,
   ) {}
 
   async execute(
@@ -108,7 +109,7 @@ export class UploadProductImagesUseCase {
         throw error;
       }
 
-      const images = await this.getImageUrls(productId);
+      const images = await this.productImageUrlsService.getImageUrls(productId);
 
       this.logger.log(
         `Uploaded ${files.length} images for product ${product.name}`,
@@ -219,23 +220,6 @@ export class UploadProductImagesUseCase {
     }
 
     return acceptedFormat;
-  }
-
-  private async getImageUrls(productId: string): Promise<ProductImageUrl[]> {
-    const images =
-      await this.productImageRepository.getActiveImagesByProductIds([
-        productId,
-      ]);
-    const expiresIn = getSignedUrlTtlSeconds();
-
-    return Promise.all(
-      images.map(async (image) => ({
-        id: image.id,
-        url: await this.fileStorageService.getSignedUrl(image.imagePath),
-        expiresIn,
-        isDefault: false,
-      })),
-    );
   }
 
   private async deleteUploadedImages(keys: string[]): Promise<void> {

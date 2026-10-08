@@ -44,6 +44,7 @@ import { PaginationMapper } from '../../../common/pagination/pagination.mapper';
 import { ErrorResponseDto } from '../../../exceptions/dto/error-response.dto';
 import { internalServerErrorExample } from '../../../exceptions/dto/error-response.example';
 import { CreateProductUseCase } from '../../application/use-cases/create-product.use-case';
+import { DeleteProductImageUseCase } from '../../application/use-cases/delete-product-image.use-case';
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
@@ -92,6 +93,7 @@ export class ProductsController {
     private readonly deleteProductUseCase: DeleteProductUseCase,
     private readonly toggleProductDisabledUseCase: ToggleProductDisabledUseCase,
     private readonly uploadProductImagesUseCase: UploadProductImagesUseCase,
+    private readonly deleteProductImageUseCase: DeleteProductImageUseCase,
   ) {}
 
   @Post()
@@ -442,6 +444,97 @@ export class ProductsController {
         size: file.size,
         originalname: file.originalname,
       })),
+    );
+    return {
+      images: images.map((image) =>
+        ProductsResponseMapper.toImageResponse(image),
+      ),
+    };
+  }
+
+  @Delete('images/:imageId')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
+  @ApiOperation({
+    summary: 'Delete a product image',
+    description:
+      'Soft-deletes a single product image by its id and removes the stored ' +
+      "file. The response contains the product's remaining images with " +
+      'time-limited presigned URLs, or the default image if none remain.',
+  })
+  @ApiOkResponse({
+    description:
+      "The product's remaining images, or the default image if none remain",
+    type: ProductImagesResponseDto,
+    examples: {
+      RemainingImages: {
+        summary: 'The product still has images',
+        value: {
+          images: [
+            {
+              id: '6f1c2b8e-4a5d-4e3f-9b7a-1c2d3e4f5a6b',
+              url: 'https://bucket.s3.amazonaws.com/products/3f2a.../6f1c....png?X-Amz-Signature=...',
+              expiresIn: 3600,
+              isDefault: false,
+            },
+          ],
+        },
+      },
+      DefaultOnly: {
+        summary: 'The deleted image was the last one',
+        value: {
+          images: [
+            {
+              id: null,
+              url: 'http://localhost:3000/static/product_default.png',
+              expiresIn: null,
+              isDefault: true,
+            },
+          ],
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description: 'Image not found, already deleted, or its product was deleted',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Product image not found',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: {
+      DeleteFailed: {
+        summary: 'The image could not be deleted or the image list built',
+        value: {
+          error: 'Failed to delete product image',
+          details: [],
+        },
+      },
+    },
+  })
+  public async deleteImage(
+    @Param('imageId', ParseUUIDPipe) imageId: string,
+    @Req() req: Request,
+  ): Promise<ProductImagesResponseDto> {
+    const { images } = await this.deleteProductImageUseCase.execute(
+      imageId,
+      this.buildDefaultImageUrl(req),
     );
     return {
       images: images.map((image) =>

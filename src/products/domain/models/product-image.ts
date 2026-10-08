@@ -41,6 +41,20 @@ export class ProductImage {
     });
   }
 
+  static delete(image: ProductImage): ProductImage {
+    const now = new Date();
+
+    return new ProductImage({
+      id: image.id,
+      imagePath: image.imagePath,
+      createdAt: image.createdAt,
+      updatedAt: now,
+      deletedAt: now,
+      productId: image.productId,
+      variantId: image.variantId,
+    });
+  }
+
   static restore(props: {
     id: string;
     imagePath: string;
