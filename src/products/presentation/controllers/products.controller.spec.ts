@@ -7,6 +7,8 @@ import { GetAllProductsUseCase } from '../../application/use-cases/get-all-produ
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
 import { ToggleProductDisabledUseCase } from '../../application/use-cases/toggle-product-disabled.use-case';
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.use-case';
+import { UploadProductImagesUseCase } from '../../application/use-cases/upload-product-images.use-case';
+import { ProductImageUrl } from '../../application/types/product-image-url';
 import { ProductsResponseMapper } from '../mappers/products-response.mapper';
 import { ProductsController } from './products.controller';
 
@@ -18,6 +20,8 @@ describe('ProductsController', () => {
   let updateProductUseCase: jest.Mocked<UpdateProductUseCase>;
   let deleteProductUseCase: jest.Mocked<DeleteProductUseCase>;
   let toggleProductDisabledUseCase: jest.Mocked<ToggleProductDisabledUseCase>;
+  let uploadProductImagesUseCase: jest.Mocked<UploadProductImagesUseCase>;
+  let req: Request;
 
   const product = Product.restore({
     id: 'product-id',
@@ -30,6 +34,40 @@ describe('ProductsController', () => {
     deletedAt: null,
     categoryId: 'category-id',
   });
+  const defaultImageUrl = 'http://localhost:3000/static/product_default.png';
+  const defaultImages: ProductImageUrl[] = [
+    { id: null, url: defaultImageUrl, expiresIn: null, isDefault: true },
+  ];
+  const uploadedImages: ProductImageUrl[] = [
+    {
+      id: 'image-1',
+      url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
+      expiresIn: 3600,
+      isDefault: false,
+    },
+    {
+      id: 'image-2',
+      url: 'https://bucket.s3.amazonaws.com/products/product-id/second.jpg?signed',
+      expiresIn: 3600,
+      isDefault: false,
+    },
+  ];
+  const query = {
+    page: 1,
+    limit: 20,
+    name: 'shirt',
+    categoryId: 'category-id',
+    fields: ['productVariants' as const],
+  };
+
+  const buildRequest = (extra: Record<string, unknown> = {}): Request =>
+    ({
+      protocol: 'http',
+      get: jest.fn((header: string) =>
+        header === 'host' ? 'localhost:3000' : undefined,
+      ),
+      ...extra,
+    }) as unknown as Request;
 
   beforeEach(() => {
     createProductUseCase = {
@@ -50,6 +88,10 @@ describe('ProductsController', () => {
     toggleProductDisabledUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<ToggleProductDisabledUseCase>;
+    uploadProductImagesUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UploadProductImagesUseCase>;
+    req = buildRequest();
 
     controller = new ProductsController(
       createProductUseCase,
@@ -58,6 +100,7 @@ describe('ProductsController', () => {
       updateProductUseCase,
       deleteProductUseCase,
       toggleProductDisabledUseCase,
+      uploadProductImagesUseCase,
     );
   });
 
@@ -66,7 +109,7 @@ describe('ProductsController', () => {
   });
 
   describe('createProduct', () => {
-    it('delegates to the use case and returns the mapped response', async () => {
+    it('delegates to the use case and returns the mapped response without images', async () => {
       createProductUseCase.execute.mockResolvedValue(product);
 
       const result = await controller.createProduct({
@@ -81,6 +124,7 @@ describe('ProductsController', () => {
         categoryId: 'category-id',
       });
       expect(result).toEqual(ProductsResponseMapper.toResponse(product));
+      expect(result).not.toHaveProperty('images');
     });
 
     it('defaults a missing description to null', async () => {
@@ -100,114 +144,199 @@ describe('ProductsController', () => {
   });
 
   describe('getAllProducts', () => {
-    it('delegates to the use case with disabled: false and the query params, and returns the mapped paginated response', async () => {
+    it('delegates to the use case with disabled: false, the query params and the default image url, and returns the mapped paginated response with images', async () => {
       getAllProductsUseCase.execute.mockResolvedValue({
-        items: [product],
+        items: [{ product, images: uploadedImages }],
         total: 1,
       });
 
-      const result = await controller.getAllProducts({
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        fields: ['productVariants'],
-      });
+      const result = await controller.getAllProducts(req, query);
 
-      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        disabled: false,
-        fields: ['productVariants'],
-      });
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 20,
+          name: 'shirt',
+          categoryId: 'category-id',
+          disabled: false,
+          fields: ['productVariants'],
+        },
+        defaultImageUrl,
+      );
       expect(result).toEqual({
-        data: [ProductsResponseMapper.toResponse(product)],
+        data: [ProductsResponseMapper.toResponse(product, uploadedImages)],
         pagination: PaginationMapper.buildMeta(1, 20, 1),
       });
+      expect(result.data[0].images).toHaveLength(2);
+    });
+
+    it('builds the default image url from the request protocol and host', async () => {
+      getAllProductsUseCase.execute.mockResolvedValue({ items: [], total: 0 });
+
+      await controller.getAllProducts(
+        buildRequest({
+          protocol: 'https',
+          get: jest.fn(() => 'api.example.com'),
+        }),
+        query,
+      );
+
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith(
+        expect.anything(),
+        'https://api.example.com/static/product_default.png',
+      );
     });
   });
 
   describe('getLikedProducts', () => {
-    const req = {
+    const likedReq = buildRequest({
       user: {
         sub: 'user-id',
         email: 'joe.doe@example.com',
         role: 'client',
         roleId: 'role-id',
       },
-    } as unknown as Request;
+    });
 
-    it('delegates to the use case with disabled: false, liked: true, the authenticated userId, and the query params, and returns the mapped paginated response', async () => {
+    it('delegates to the use case with disabled: false, liked: true, the authenticated userId, the query params and the default image url, and returns the mapped paginated response with images', async () => {
       getAllProductsUseCase.execute.mockResolvedValue({
-        items: [product],
+        items: [{ product, images: defaultImages }],
         total: 1,
       });
 
-      const result = await controller.getLikedProducts(req, {
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        fields: ['productVariants'],
-      });
+      const result = await controller.getLikedProducts(likedReq, query);
 
-      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        disabled: false,
-        liked: true,
-        userId: 'user-id',
-        fields: ['productVariants'],
-      });
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 20,
+          name: 'shirt',
+          categoryId: 'category-id',
+          disabled: false,
+          liked: true,
+          userId: 'user-id',
+          fields: ['productVariants'],
+        },
+        defaultImageUrl,
+      );
       expect(result).toEqual({
-        data: [ProductsResponseMapper.toResponse(product)],
+        data: [ProductsResponseMapper.toResponse(product, defaultImages)],
         pagination: PaginationMapper.buildMeta(1, 20, 1),
       });
     });
   });
 
   describe('getDisabledProducts', () => {
-    it('delegates to the use case with disabled: true and the query params, and returns the mapped paginated response', async () => {
+    it('delegates to the use case with disabled: true, the query params and the default image url, and returns the mapped paginated response with images', async () => {
       getAllProductsUseCase.execute.mockResolvedValue({
-        items: [product],
+        items: [{ product, images: defaultImages }],
         total: 1,
       });
 
-      const result = await controller.getDisabledProducts({
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        fields: ['productVariants'],
-      });
+      const result = await controller.getDisabledProducts(req, query);
 
-      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith({
-        page: 1,
-        limit: 20,
-        name: 'shirt',
-        categoryId: 'category-id',
-        disabled: true,
-        fields: ['productVariants'],
-      });
+      expect(getAllProductsUseCase.execute).toHaveBeenCalledWith(
+        {
+          page: 1,
+          limit: 20,
+          name: 'shirt',
+          categoryId: 'category-id',
+          disabled: true,
+          fields: ['productVariants'],
+        },
+        defaultImageUrl,
+      );
       expect(result).toEqual({
-        data: [ProductsResponseMapper.toResponse(product)],
+        data: [ProductsResponseMapper.toResponse(product, defaultImages)],
         pagination: PaginationMapper.buildMeta(1, 20, 1),
       });
     });
   });
 
   describe('getProductById', () => {
-    it('delegates to the use case and returns the mapped response', async () => {
-      getProductByIdUseCase.execute.mockResolvedValue(product);
+    it('delegates to the use case with the default image url and returns the mapped response with images', async () => {
+      getProductByIdUseCase.execute.mockResolvedValue({
+        product,
+        images: uploadedImages,
+      });
 
-      const result = await controller.getProductById('product-id');
+      const result = await controller.getProductById('product-id', req);
 
-      expect(getProductByIdUseCase.execute).toHaveBeenCalledWith('product-id');
-      expect(result).toEqual(ProductsResponseMapper.toResponse(product));
+      expect(getProductByIdUseCase.execute).toHaveBeenCalledWith(
+        'product-id',
+        defaultImageUrl,
+      );
+      expect(result).toEqual(
+        ProductsResponseMapper.toResponse(product, uploadedImages),
+      );
+    });
+  });
+
+  describe('uploadImages', () => {
+    const files = [
+      {
+        fieldname: 'images',
+        originalname: 'front.png',
+        mimetype: 'image/png',
+        buffer: Buffer.from('front-bytes'),
+        size: 11,
+      },
+      {
+        fieldname: 'images',
+        originalname: 'back.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('back-bytes'),
+        size: 10,
+      },
+    ] as Express.Multer.File[];
+
+    it('passes only the buffer, size and name of each file to the use case and returns the mapped image list', async () => {
+      uploadProductImagesUseCase.execute.mockResolvedValue({
+        images: uploadedImages,
+      });
+
+      const result = await controller.uploadImages('product-id', files);
+
+      expect(uploadProductImagesUseCase.execute).toHaveBeenCalledWith(
+        'product-id',
+        [
+          {
+            buffer: files[0].buffer,
+            size: 11,
+            originalname: 'front.png',
+          },
+          {
+            buffer: files[1].buffer,
+            size: 10,
+            originalname: 'back.jpg',
+          },
+        ],
+      );
+      expect(result).toEqual({
+        images: uploadedImages.map((image) =>
+          ProductsResponseMapper.toImageResponse(image),
+        ),
+      });
+    });
+
+    it('passes undefined files through when the request had none', async () => {
+      uploadProductImagesUseCase.execute.mockResolvedValue({ images: [] });
+
+      await controller.uploadImages('product-id', undefined);
+
+      expect(uploadProductImagesUseCase.execute).toHaveBeenCalledWith(
+        'product-id',
+        undefined,
+      );
+    });
+
+    it('propagates use case errors', async () => {
+      const failure = new Error('upload failed');
+      uploadProductImagesUseCase.execute.mockRejectedValue(failure);
+
+      await expect(controller.uploadImages('product-id', files)).rejects.toBe(
+        failure,
+      );
     });
   });
 

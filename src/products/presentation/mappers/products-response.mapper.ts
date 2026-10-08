@@ -1,9 +1,14 @@
 import { ProductVariantResponseMapper } from '../../../product-variants/presentation/mappers/product-variant-response.mapper';
+import { ProductImageUrl } from '../../application/types/product-image-url';
 import { Product } from '../../domain/models/product';
+import { ProductImageResponseDto } from '../dto/product-image-response';
 import { ProductResponseDto } from '../dto/product-response';
 
 export class ProductsResponseMapper {
-  static toResponse(product: Product): ProductResponseDto {
+  static toResponse(
+    product: Product,
+    images?: ProductImageUrl[],
+  ): ProductResponseDto {
     return {
       id: product.id,
       name: product.name,
@@ -21,6 +26,22 @@ export class ProductsResponseMapper {
             ),
           }
         : {}),
+      ...(images
+        ? {
+            images: images.map((image) =>
+              ProductsResponseMapper.toImageResponse(image),
+            ),
+          }
+        : {}),
+    };
+  }
+
+  static toImageResponse(image: ProductImageUrl): ProductImageResponseDto {
+    return {
+      id: image.id,
+      url: image.url,
+      expiresIn: image.expiresIn,
+      isDefault: image.isDefault,
     };
   }
 }

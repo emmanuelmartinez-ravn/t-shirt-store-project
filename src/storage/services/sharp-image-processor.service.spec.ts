@@ -19,13 +19,25 @@ describe('SharpImageProcessorService', () => {
   let jpeg600: Buffer;
   let gif600: Buffer;
   let transparentPng800: Buffer;
+  let png1024x600: Buffer;
+  let rotatedJpeg300x200: Buffer;
 
   beforeAll(async () => {
-    [png800, jpeg600, gif600, transparentPng800] = await Promise.all([
+    [
+      png800,
+      jpeg600,
+      gif600,
+      transparentPng800,
+      png1024x600,
+      rotatedJpeg300x200,
+    ] = await Promise.all([
       blankImage(800, 800).png().toBuffer(),
       blankImage(600, 600).jpeg().toBuffer(),
       blankImage(600, 600).gif().toBuffer(),
       blankImage(800, 800, transparent).png().toBuffer(),
+      blankImage(1024, 600).png().toBuffer(),
+      // EXIF orientation 6 = stored landscape, displayed rotated 90deg clockwise.
+      blankImage(300, 200).jpeg().withMetadata({ orientation: 6 }).toBuffer(),
     ]);
   });
 
@@ -105,6 +117,52 @@ describe('SharpImageProcessorService', () => {
       expect(info.height).toBe(512);
       const [r, g, b] = data;
       expect([r, g, b]).toEqual([255, 255, 255]);
+    });
+  });
+
+  describe('normalize', () => {
+    it('keeps a png as png at its original non-square dimensions', async () => {
+      const result = await service.normalize(png1024x600, 'png');
+
+      const metadata = await sharp(result).metadata();
+      expect(metadata.format).toBe('png');
+      expect(metadata.width).toBe(1024);
+      expect(metadata.height).toBe(600);
+    });
+
+    it('keeps a jpeg as jpeg at its original dimensions', async () => {
+      const result = await service.normalize(jpeg600, 'jpeg');
+
+      const metadata = await sharp(result).metadata();
+      expect(metadata.format).toBe('jpeg');
+      expect(metadata.width).toBe(600);
+      expect(metadata.height).toBe(600);
+    });
+
+    it('preserves transparency when keeping a png as png', async () => {
+      const result = await service.normalize(transparentPng800, 'png');
+
+      const { data, info } = await sharp(result)
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      expect(info.channels).toBe(4);
+      expect(data[3]).toBe(0);
+    });
+
+    it('applies the exif orientation and drops the orientation tag', async () => {
+      const result = await service.normalize(rotatedJpeg300x200, 'jpeg');
+
+      const metadata = await sharp(result).metadata();
+      expect(metadata.format).toBe('jpeg');
+      expect(metadata.width).toBe(200);
+      expect(metadata.height).toBe(300);
+      expect(metadata.orientation).toBeUndefined();
+    });
+
+    it('propagates the failure for unreadable bytes', async () => {
+      await expect(
+        service.normalize(Buffer.from('definitely not an image'), 'png'),
+      ).rejects.toThrow();
     });
   });
 });

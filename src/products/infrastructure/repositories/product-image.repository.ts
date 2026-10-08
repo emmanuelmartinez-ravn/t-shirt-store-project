@@ -1,0 +1,9 @@
+import { ProductImage } from '../../domain/models/product-image';
+
+export abstract class ProductImageRepository {
+  abstract countActiveImages(productId: string): Promise<number>;
+  abstract createImages(images: ProductImage[]): Promise<void>;
+  abstract getActiveImagesByProductIds(
+    productIds: string[],
+  ): Promise<ProductImage[]>;
+}

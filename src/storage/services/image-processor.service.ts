@@ -5,4 +5,5 @@ export abstract class ImageProcessorService {
     height: number | undefined;
   }>;
   abstract resizeToJpeg(image: Buffer, size: number): Promise<Buffer>;
+  abstract normalize(image: Buffer, format: 'png' | 'jpeg'): Promise<Buffer>;
 }

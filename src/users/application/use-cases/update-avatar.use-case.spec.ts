@@ -68,6 +68,7 @@ describe('UpdateAvatarUseCase', () => {
     imageProcessorService = {
       getMetadata: jest.fn(),
       resizeToJpeg: jest.fn(),
+      normalize: jest.fn(),
     };
 
     userRepository.getUserById.mockResolvedValue(user);

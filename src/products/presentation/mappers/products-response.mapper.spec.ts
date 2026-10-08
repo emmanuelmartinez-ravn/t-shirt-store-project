@@ -1,5 +1,6 @@
 import { ProductVariant } from '../../../product-variants/domain/models/product-variant';
 import { ProductVariantResponseMapper } from '../../../product-variants/presentation/mappers/product-variant-response.mapper';
+import { ProductImageUrl } from '../../application/types/product-image-url';
 import { Product } from '../../domain/models/product';
 import { ProductsResponseMapper } from './products-response.mapper';
 
@@ -15,6 +16,18 @@ describe('ProductsResponseMapper', () => {
     deletedAt: null,
     categoryId: 'category-id',
   });
+  const uploadedImage: ProductImageUrl = {
+    id: 'image-id',
+    url: 'https://bucket.s3.amazonaws.com/products/product-id/image.png?signed',
+    expiresIn: 3600,
+    isDefault: false,
+  };
+  const defaultImage: ProductImageUrl = {
+    id: null,
+    url: 'http://localhost:3000/static/product_default.png',
+    expiresIn: null,
+    isDefault: true,
+  };
 
   describe('toResponse', () => {
     it('is defined', () => {
@@ -111,6 +124,56 @@ describe('ProductsResponseMapper', () => {
       expect(result.productVariants).toEqual([
         ProductVariantResponseMapper.toResponse(variant),
       ]);
+    });
+
+    it('omits the images key entirely when no images are passed', () => {
+      const result = ProductsResponseMapper.toResponse(product);
+
+      expect(result).not.toHaveProperty('images');
+    });
+
+    it('maps each passed image via toImageResponse, keeping their order', () => {
+      const result = ProductsResponseMapper.toResponse(product, [
+        uploadedImage,
+        defaultImage,
+      ]);
+
+      expect(result.images).toEqual([
+        ProductsResponseMapper.toImageResponse(uploadedImage),
+        ProductsResponseMapper.toImageResponse(defaultImage),
+      ]);
+    });
+
+    it('includes an empty images array when an empty list is passed', () => {
+      const result = ProductsResponseMapper.toResponse(product, []);
+
+      expect(result).toHaveProperty('images', []);
+    });
+  });
+
+  describe('toImageResponse', () => {
+    it('maps an uploaded image with its presigned url and ttl', () => {
+      expect(ProductsResponseMapper.toImageResponse(uploadedImage)).toEqual({
+        id: 'image-id',
+        url: 'https://bucket.s3.amazonaws.com/products/product-id/image.png?signed',
+        expiresIn: 3600,
+        isDefault: false,
+      });
+    });
+
+    it('maps the default image with null id and expiresIn', () => {
+      expect(ProductsResponseMapper.toImageResponse(defaultImage)).toEqual({
+        id: null,
+        url: 'http://localhost:3000/static/product_default.png',
+        expiresIn: null,
+        isDefault: true,
+      });
+    });
+
+    it('returns a new object rather than the input', () => {
+      expect(ProductsResponseMapper.toImageResponse(uploadedImage)).not.toBe(
+        uploadedImage,
+      );
     });
   });
 });
