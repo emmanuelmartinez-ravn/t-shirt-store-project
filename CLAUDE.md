@@ -58,6 +58,7 @@ This file is the canonical, always-loaded overview. Deeper reference docs live u
 - `.claude/skills/commit/SKILL.md` (`/commit`) and `.claude/skills/pr/SKILL.md` (`/pr`) — this repo's commit/PR workflow; prefer these over ad hoc git commands.
 - `.claude/agents/backend-engineer.md` and `.claude/agents/test-engineer.md` — paired subagents for feature work (see "Agent workflow notes" above for when to use them): backend-engineer implements (use-cases, controllers, repositories, Prisma schema) but never touches `*.spec.ts`; test-engineer covers what it built per `.claude/rules/testing.md` and reports implementation gaps back instead of working around them.
 - `prisma-cli` / `prisma-client-api` skills — detailed Prisma command/query reference (see Commands above).
+- `.claude/tools/db-query/` + `query-db` skill — read-only tool for answering questions about the DB's current state (defaults to the local Docker DB). A PreToolUse hook (`.claude/hooks/db-readonly-guard.mjs`, registered in `.claude/settings.json`) blocks writes through it, plus direct `psql`/`docker exec` and inline DB scripts; the Prisma CLI stays allowed.
 
 ## Architecture
 
