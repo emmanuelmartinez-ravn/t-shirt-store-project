@@ -13,6 +13,8 @@ import { Product } from '../../domain/models/product';
 import { ProductImage } from '../../domain/models/product-image';
 import { ProductImageRepository } from '../../infrastructure/repositories/product-image.repository';
 import { ProductRepository } from '../../infrastructure/repositories/product.repository';
+import { ProductImageUrlsService } from '../services/product-image-urls.service';
+import { ProductImageUrl } from '../types/product-image-url';
 import {
   ProductImageUpload,
   UploadProductImagesUseCase,
@@ -24,8 +26,7 @@ describe('UploadProductImagesUseCase', () => {
   let productImageRepository: jest.Mocked<ProductImageRepository>;
   let fileStorageService: jest.Mocked<FileStorageService>;
   let imageProcessorService: jest.Mocked<ImageProcessorService>;
-
-  const originalTtl = process.env.AWS_S3_SIGNED_URL_TTL;
+  let productImageUrlsService: jest.Mocked<ProductImageUrlsService>;
 
   const product = Product.restore({
     id: 'product-id',
@@ -55,25 +56,19 @@ describe('UploadProductImagesUseCase', () => {
   };
   const pngMetadata = { format: 'png', width: 800, height: 800 };
   const jpegMetadata = { format: 'jpeg', width: 1024, height: 600 };
-  const persistedImages = [
-    ProductImage.restore({
+  const imageUrls: ProductImageUrl[] = [
+    {
       id: 'image-1',
-      imagePath: 'products/product-id/first.png',
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-      deletedAt: null,
-      productId: 'product-id',
-      variantId: null,
-    }),
-    ProductImage.restore({
+      url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
+      expiresIn: 3600,
+      isDefault: false,
+    },
+    {
       id: 'image-2',
-      imagePath: 'products/product-id/second.jpg',
-      createdAt: new Date('2026-01-02T00:00:00.000Z'),
-      updatedAt: new Date('2026-01-02T00:00:00.000Z'),
-      deletedAt: null,
-      productId: 'product-id',
-      variantId: null,
-    }),
+      url: 'https://bucket.s3.amazonaws.com/products/product-id/second.jpg?signed',
+      expiresIn: 3600,
+      isDefault: false,
+    },
   ];
   const pngKeyPattern = /^products\/product-id\/[0-9a-f-]{36}\.png$/;
   const jpgKeyPattern = /^products\/product-id\/[0-9a-f-]{36}\.jpg$/;
@@ -85,8 +80,6 @@ describe('UploadProductImagesUseCase', () => {
     fileStorageService.upload.mock.calls.map(([params]) => params.key);
 
   beforeEach(() => {
-    delete process.env.AWS_S3_SIGNED_URL_TTL;
-
     productRepository = {
       createProduct: jest.fn(),
       getAllProducts: jest.fn(),
@@ -100,6 +93,8 @@ describe('UploadProductImagesUseCase', () => {
       countActiveImages: jest.fn(),
       createImages: jest.fn(),
       getActiveImagesByProductIds: jest.fn(),
+      getActiveImageById: jest.fn(),
+      deleteImage: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
@@ -111,37 +106,31 @@ describe('UploadProductImagesUseCase', () => {
       resizeToJpeg: jest.fn(),
       normalize: jest.fn(),
     };
+    productImageUrlsService = {
+      getImageUrls: jest.fn(),
+    } as unknown as jest.Mocked<ProductImageUrlsService>;
 
     productRepository.getProductById.mockResolvedValue(product);
     productImageRepository.countActiveImages.mockResolvedValue(0);
     productImageRepository.createImages.mockResolvedValue(undefined);
-    productImageRepository.getActiveImagesByProductIds.mockResolvedValue(
-      persistedImages,
-    );
+    productImageUrlsService.getImageUrls.mockResolvedValue(imageUrls);
     imageProcessorService.getMetadata.mockResolvedValue(pngMetadata);
     imageProcessorService.normalize.mockImplementation((image) =>
       Promise.resolve(Buffer.concat([Buffer.from('normalized-'), image])),
     );
     fileStorageService.upload.mockResolvedValue(undefined);
     fileStorageService.delete.mockResolvedValue(undefined);
-    fileStorageService.getSignedUrl.mockImplementation((key) =>
-      Promise.resolve(`https://bucket.s3.amazonaws.com/${key}?signed`),
-    );
 
     useCase = new UploadProductImagesUseCase(
       productRepository,
       productImageRepository,
       fileStorageService,
       imageProcessorService,
+      productImageUrlsService,
     );
   });
 
   afterEach(() => {
-    if (originalTtl === undefined) {
-      delete process.env.AWS_S3_SIGNED_URL_TTL;
-    } else {
-      process.env.AWS_S3_SIGNED_URL_TTL = originalTtl;
-    }
     jest.restoreAllMocks();
   });
 
@@ -150,7 +139,7 @@ describe('UploadProductImagesUseCase', () => {
   });
 
   describe('execute', () => {
-    it('normalizes, uploads and persists every image, then returns the product image list with presigned urls and the default ttl', async () => {
+    it('normalizes, uploads and persists every image, then returns the product image list without a default image', async () => {
       const result = await useCase.execute('product-id', [front, side]);
 
       expect(productRepository.getProductById).toHaveBeenCalledWith(
@@ -189,31 +178,21 @@ describe('UploadProductImagesUseCase', () => {
             }) as ProductImage,
         ),
       );
+      expect(productImageUrlsService.getImageUrls).toHaveBeenCalledTimes(1);
+      expect(productImageUrlsService.getImageUrls).toHaveBeenCalledWith(
+        'product-id',
+      );
+      expect(result).toEqual({ images: imageUrls });
+    });
+
+    it('builds the image list only after the new images are persisted', async () => {
+      await useCase.execute('product-id', [front]);
+
       expect(
-        productImageRepository.getActiveImagesByProductIds,
-      ).toHaveBeenCalledWith(['product-id']);
-      expect(fileStorageService.getSignedUrl).toHaveBeenCalledWith(
-        persistedImages[0].imagePath,
+        productImageRepository.createImages.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        productImageUrlsService.getImageUrls.mock.invocationCallOrder[0],
       );
-      expect(fileStorageService.getSignedUrl).toHaveBeenCalledWith(
-        persistedImages[1].imagePath,
-      );
-      expect(result).toEqual({
-        images: [
-          {
-            id: 'image-1',
-            url: `https://bucket.s3.amazonaws.com/${persistedImages[0].imagePath}?signed`,
-            expiresIn: 3600,
-            isDefault: false,
-          },
-          {
-            id: 'image-2',
-            url: `https://bucket.s3.amazonaws.com/${persistedImages[1].imagePath}?signed`,
-            expiresIn: 3600,
-            isDefault: false,
-          },
-        ],
-      });
     });
 
     it('stores a jpeg under a .jpg key with an image/jpeg content type, keeping its format', async () => {
@@ -254,14 +233,6 @@ describe('UploadProductImagesUseCase', () => {
 
       const [first, second] = uploadedKeys();
       expect(first).not.toBe(second);
-    });
-
-    it('reports the configured AWS_S3_SIGNED_URL_TTL as expiresIn', async () => {
-      process.env.AWS_S3_SIGNED_URL_TTL = '900';
-
-      const result = await useCase.execute('product-id', [front]);
-
-      expect(result.images.map((image) => image.expiresIn)).toEqual([900, 900]);
     });
 
     it('allows uploading images to a disabled product', async () => {
@@ -554,7 +525,7 @@ describe('UploadProductImagesUseCase', () => {
       keys.forEach((key) =>
         expect(fileStorageService.delete).toHaveBeenCalledWith(key),
       );
-      expect(fileStorageService.getSignedUrl).not.toHaveBeenCalled();
+      expect(productImageUrlsService.getImageUrls).not.toHaveBeenCalled();
     });
 
     it('warns and keeps cleaning up the remaining keys when a delete fails, still reporting an InternalServerErrorException', async () => {
@@ -579,8 +550,8 @@ describe('UploadProductImagesUseCase', () => {
       );
     });
 
-    it('translates a presign failure after persisting into an InternalServerErrorException without deleting the stored images', async () => {
-      fileStorageService.getSignedUrl.mockRejectedValue(
+    it('translates an image list failure after persisting into an InternalServerErrorException without deleting the stored images', async () => {
+      productImageUrlsService.getImageUrls.mockRejectedValue(
         new Error('presign failed'),
       );
 

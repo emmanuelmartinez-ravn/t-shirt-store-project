@@ -40,6 +40,51 @@ describe('ProductImage', () => {
     });
   });
 
+  describe('delete', () => {
+    const live = ProductImage.restore({
+      id: 'image-id',
+      imagePath: 'products/product-id/image.png',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      productId: 'product-id',
+      variantId: 'variant-id',
+    });
+
+    it('returns a new image stamped with the same current time as deletedAt and updatedAt', () => {
+      const before = Date.now();
+
+      const deleted = ProductImage.delete(live);
+
+      const after = Date.now();
+      expect(deleted).toBeInstanceOf(ProductImage);
+      expect(deleted).not.toBe(live);
+      expect(deleted.deletedAt).toBeInstanceOf(Date);
+      expect(deleted.deletedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      expect(deleted.deletedAt!.getTime()).toBeLessThanOrEqual(after);
+      expect(deleted.updatedAt).toEqual(deleted.deletedAt);
+    });
+
+    it('keeps every other field of the original image', () => {
+      const deleted = ProductImage.delete(live);
+
+      expect(deleted).toMatchObject({
+        id: 'image-id',
+        imagePath: 'products/product-id/image.png',
+        createdAt: live.createdAt,
+        productId: 'product-id',
+        variantId: 'variant-id',
+      });
+    });
+
+    it('leaves the original image untouched', () => {
+      ProductImage.delete(live);
+
+      expect(live.deletedAt).toBeNull();
+      expect(live.updatedAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+    });
+  });
+
   describe('restore', () => {
     it('rehydrates all fields as-is from persistence', () => {
       const props = {

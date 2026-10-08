@@ -1,4 +1,6 @@
+import { Prisma } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../prisma/services/prisma.service';
+import { ProductImageNotFoundError } from '../../domain/errors/product-image-not-found';
 import { ProductImage } from '../../domain/models/product-image';
 import { PrismaProductImageRepository } from './prisma-product-image.repository';
 
@@ -9,6 +11,8 @@ describe('PrismaProductImageRepository', () => {
       count: jest.Mock;
       createMany: jest.Mock;
       findMany: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -34,6 +38,8 @@ describe('PrismaProductImageRepository', () => {
         count: jest.fn(),
         createMany: jest.fn(),
         findMany: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
       },
     };
     repository = new PrismaProductImageRepository(
@@ -113,6 +119,80 @@ describe('PrismaProductImageRepository', () => {
 
       expect(prisma.productImage.findMany).not.toHaveBeenCalled();
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getActiveImageById', () => {
+    it('looks up the non-deleted image by id and maps it to a domain entity', async () => {
+      prisma.productImage.findFirst.mockResolvedValue(record);
+
+      const result = await repository.getActiveImageById('image-id');
+
+      expect(prisma.productImage.findFirst).toHaveBeenCalledWith({
+        where: { id: 'image-id', deletedAt: null },
+      });
+      expect(result).toEqual(ProductImage.restore(record));
+      expect(result).toBeInstanceOf(ProductImage);
+    });
+
+    it('returns null when no live image matches', async () => {
+      prisma.productImage.findFirst.mockResolvedValue(null);
+
+      const result = await repository.getActiveImageById('image-id');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('deleteImage', () => {
+    const deletedAt = new Date('2026-02-01T00:00:00.000Z');
+    const deletedRecord = { ...record, updatedAt: deletedAt, deletedAt };
+    const deletedImage = ProductImage.restore(deletedRecord);
+
+    it('soft-deletes only a still-live image by writing its updatedAt and deletedAt, and returns the mapped record', async () => {
+      prisma.productImage.update.mockResolvedValue(deletedRecord);
+
+      const result = await repository.deleteImage(deletedImage);
+
+      expect(prisma.productImage.update).toHaveBeenCalledWith({
+        where: { id: 'image-id', deletedAt: null },
+        data: { updatedAt: deletedAt, deletedAt },
+      });
+      expect(result).toEqual(deletedImage);
+      expect(result).toBeInstanceOf(ProductImage);
+    });
+
+    it('translates a record-not-found error into ProductImageNotFoundError', async () => {
+      prisma.productImage.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(repository.deleteImage(deletedImage)).rejects.toThrow(
+        ProductImageNotFoundError,
+      );
+    });
+
+    it('rethrows other known prisma errors unchanged', async () => {
+      const failure = new Prisma.PrismaClientKnownRequestError(
+        'Foreign key constraint failed',
+        { code: 'P2003', clientVersion: '7.9.1' },
+      );
+      prisma.productImage.update.mockRejectedValue(failure);
+
+      await expect(repository.deleteImage(deletedImage)).rejects.toBe(failure);
+    });
+
+    it('rethrows unrelated errors unchanged', async () => {
+      prisma.productImage.update.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(repository.deleteImage(deletedImage)).rejects.toThrow(
+        'connection lost',
+      );
     });
   });
 });

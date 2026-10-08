@@ -17,6 +17,8 @@ import { UpdateProductUseCase } from './application/use-cases/update-product.use
 import { DeleteProductUseCase } from './application/use-cases/delete-product.use-case';
 import { ToggleProductDisabledUseCase } from './application/use-cases/toggle-product-disabled.use-case';
 import { UploadProductImagesUseCase } from './application/use-cases/upload-product-images.use-case';
+import { DeleteProductImageUseCase } from './application/use-cases/delete-product-image.use-case';
+import { ProductImageUrlsService } from './application/services/product-image-urls.service';
 
 @Module({
   imports: [PrismaModule, AuthorizationModule, CategoriesModule, StorageModule],
@@ -29,6 +31,8 @@ import { UploadProductImagesUseCase } from './application/use-cases/upload-produ
     DeleteProductUseCase,
     ToggleProductDisabledUseCase,
     UploadProductImagesUseCase,
+    DeleteProductImageUseCase,
+    ProductImageUrlsService,
     { provide: ProductRepository, useClass: PrismaProductRepository },
     {
       provide: ProductImageRepository,

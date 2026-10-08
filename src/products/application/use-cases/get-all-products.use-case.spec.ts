@@ -72,6 +72,8 @@ describe('GetAllProductsUseCase', () => {
       countActiveImages: jest.fn(),
       createImages: jest.fn(),
       getActiveImagesByProductIds: jest.fn(),
+      getActiveImageById: jest.fn(),
+      deleteImage: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
