@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductVariantResponseDto } from '../../../product-variants/presentation/dto/product-variant-response';
+import { ProductImageResponseDto } from './product-image-response';
 
 export class ProductResponseDto {
   @ApiProperty({
@@ -69,4 +70,12 @@ export class ProductResponseDto {
     isArray: true,
   })
   productVariants?: ProductVariantResponseDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Product images ordered by upload date (oldest first); a single default image when the product has none. Present on every GET product response, omitted on create/update/delete/toggle responses',
+    type: ProductImageResponseDto,
+    isArray: true,
+  })
+  images?: ProductImageResponseDto[];
 }
