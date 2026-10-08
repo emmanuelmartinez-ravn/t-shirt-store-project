@@ -45,6 +45,7 @@ describe('GetAllProductsUseCase', () => {
     ...firstImage,
     id: 'image-2',
     imagePath: 'products/product-id/second.jpg',
+    variantId: 'variant-id',
   });
   const defaultImageUrl = 'http://localhost:3000/static/product_default.png';
   const defaultImage = {
@@ -52,6 +53,7 @@ describe('GetAllProductsUseCase', () => {
     url: defaultImageUrl,
     expiresIn: null,
     isDefault: true,
+    variantId: null,
   };
   const signedUrlFor = (key: string): string =>
     `https://bucket.s3.amazonaws.com/${key}?signed`;
@@ -74,6 +76,7 @@ describe('GetAllProductsUseCase', () => {
       getActiveImagesByProductIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
+      updateImageVariant: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
@@ -142,7 +145,7 @@ describe('GetAllProductsUseCase', () => {
       ).toHaveBeenCalledWith(['product-id', 'other-product-id']);
     });
 
-    it('groups presigned images under their product and falls back to the default image for products without any', async () => {
+    it('groups presigned images under their product with their linked variant id and falls back to the default image for products without any', async () => {
       productRepository.getAllProducts.mockResolvedValue({
         items: [product, productWithoutImages],
         total: 2,
@@ -173,12 +176,14 @@ describe('GetAllProductsUseCase', () => {
                 url: signedUrlFor(firstImage.imagePath),
                 expiresIn: 3600,
                 isDefault: false,
+                variantId: null,
               },
               {
                 id: 'image-2',
                 url: signedUrlFor(secondImage.imagePath),
                 expiresIn: 3600,
                 isDefault: false,
+                variantId: 'variant-id',
               },
             ],
           },

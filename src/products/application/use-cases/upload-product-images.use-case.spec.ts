@@ -62,12 +62,14 @@ describe('UploadProductImagesUseCase', () => {
       url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
     {
       id: 'image-2',
       url: 'https://bucket.s3.amazonaws.com/products/product-id/second.jpg?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
   ];
   const pngKeyPattern = /^products\/product-id\/[0-9a-f-]{36}\.png$/;
@@ -95,6 +97,7 @@ describe('UploadProductImagesUseCase', () => {
       getActiveImagesByProductIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
+      updateImageVariant: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
@@ -108,6 +111,7 @@ describe('UploadProductImagesUseCase', () => {
     };
     productImageUrlsService = {
       getImageUrls: jest.fn(),
+      getImageUrl: jest.fn(),
     } as unknown as jest.Mocked<ProductImageUrlsService>;
 
     productRepository.getProductById.mockResolvedValue(product);
