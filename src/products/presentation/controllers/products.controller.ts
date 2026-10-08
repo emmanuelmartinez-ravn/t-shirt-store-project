@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UploadedFiles,
@@ -48,11 +49,14 @@ import { DeleteProductImageUseCase } from '../../application/use-cases/delete-pr
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
+import { LinkProductImageVariantUseCase } from '../../application/use-cases/link-product-image-variant.use-case';
 import { ToggleProductDisabledUseCase } from '../../application/use-cases/toggle-product-disabled.use-case';
+import { UnlinkProductImageVariantUseCase } from '../../application/use-cases/unlink-product-image-variant.use-case';
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.use-case';
 import { UploadProductImagesUseCase } from '../../application/use-cases/upload-product-images.use-case';
 import { CreateProductDto } from '../dto/product-create';
 import { UpdateProductDto } from '../dto/product-update';
+import { ProductImageResponseDto } from '../dto/product-image-response';
 import { ProductImagesResponseDto } from '../dto/product-images-response';
 import { ProductResponseDto } from '../dto/product-response';
 import { ProductsQueryDto } from '../dto/products-query';
@@ -94,6 +98,8 @@ export class ProductsController {
     private readonly toggleProductDisabledUseCase: ToggleProductDisabledUseCase,
     private readonly uploadProductImagesUseCase: UploadProductImagesUseCase,
     private readonly deleteProductImageUseCase: DeleteProductImageUseCase,
+    private readonly linkProductImageVariantUseCase: LinkProductImageVariantUseCase,
+    private readonly unlinkProductImageVariantUseCase: UnlinkProductImageVariantUseCase,
   ) {}
 
   @Post()
@@ -478,6 +484,7 @@ export class ProductsController {
               url: 'https://bucket.s3.amazonaws.com/products/3f2a.../6f1c....png?X-Amz-Signature=...',
               expiresIn: 3600,
               isDefault: false,
+              variantId: null,
             },
           ],
         },
@@ -491,6 +498,7 @@ export class ProductsController {
               url: 'http://localhost:3000/static/product_default.png',
               expiresIn: null,
               isDefault: true,
+              variantId: null,
             },
           ],
         },
@@ -541,6 +549,176 @@ export class ProductsController {
         ProductsResponseMapper.toImageResponse(image),
       ),
     };
+  }
+
+  @Put('images/:imageId/variant/:variantId')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
+  @ApiOperation({
+    summary: 'Link a product image to a variant',
+    description:
+      "Links an image to one of its product's variants (disabled variants are " +
+      'allowed). Linking an image to the variant it is already linked to is a ' +
+      'no-op; an image linked to a different variant must be unlinked first. ' +
+      'The response contains the image with a time-limited presigned URL.',
+  })
+  @ApiOkResponse({
+    description: 'The linked image',
+    type: ProductImageResponseDto,
+    example: {
+      id: '6f1c2b8e-4a5d-4e3f-9b7a-1c2d3e4f5a6b',
+      url: 'https://bucket.s3.amazonaws.com/products/3f2a.../6f1c....png?X-Amz-Signature=...',
+      expiresIn: 3600,
+      isDefault: false,
+      variantId: '7c2e9a4b-1f3d-4a6e-8b5c-9d0e1f2a3b4c',
+    },
+  })
+  @ApiBadRequestResponse({
+    description:
+      "Invalid id, or the variant does not belong to the image's product",
+    type: ErrorResponseDto,
+    examples: {
+      InvalidId: {
+        summary: 'imageId or variantId is not a valid UUID',
+        value: {
+          error: 'Validation failed (uuid is expected)',
+          details: [],
+        },
+      },
+      VariantOfAnotherProduct: {
+        summary: 'The variant belongs to a different product',
+        value: {
+          error: "Variant does not belong to the image's product",
+          details: [],
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description:
+      'Image not found, deleted, or its product was deleted; or variant not found or deleted',
+    type: ErrorResponseDto,
+    examples: {
+      ImageNotFound: {
+        summary: 'Image not found',
+        value: {
+          error: 'Product image not found',
+          details: [],
+        },
+      },
+      VariantNotFound: {
+        summary: 'Variant not found',
+        value: {
+          error: 'Product variant not found',
+          details: [],
+        },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description: 'The image is already linked to a different variant',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Product image is already linked to a variant',
+      details: [
+        'Linked to variant 7c2e9a4b-1f3d-4a6e-8b5c-9d0e1f2a3b4c; unlink it first',
+      ],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: {
+      LinkFailed: {
+        summary: 'The image could not be linked or presigned',
+        value: {
+          error: 'Failed to link product image',
+          details: [],
+        },
+      },
+    },
+  })
+  public async linkImageVariant(
+    @Param('imageId', ParseUUIDPipe) imageId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+  ): Promise<ProductImageResponseDto> {
+    const image = await this.linkProductImageVariantUseCase.execute(
+      imageId,
+      variantId,
+    );
+    return ProductsResponseMapper.toImageResponse(image);
+  }
+
+  @Delete('images/:imageId/variant')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PoliciesGuard)
+  @CheckPolicies((ability) => ability.can(Action.Update, 'Product'))
+  @ApiOperation({
+    summary: 'Unlink a product image from its variant',
+    description:
+      'Removes the link between an image and the variant it is linked to. ' +
+      'The response contains the image with a time-limited presigned URL.',
+  })
+  @ApiOkResponse({
+    description: 'The unlinked image',
+    type: ProductImageResponseDto,
+    example: {
+      id: '6f1c2b8e-4a5d-4e3f-9b7a-1c2d3e4f5a6b',
+      url: 'https://bucket.s3.amazonaws.com/products/3f2a.../6f1c....png?X-Amz-Signature=...',
+      expiresIn: 3600,
+      isDefault: false,
+      variantId: null,
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Validation failed (uuid is expected)',
+      details: [],
+    },
+  })
+  @ApiUnauthorizedResponse(MANAGER_ONLY_UNAUTHORIZED_RESPONSE)
+  @ApiForbiddenResponse(MANAGER_ONLY_FORBIDDEN_RESPONSE)
+  @ApiNotFoundResponse({
+    description: 'Image not found, already deleted, or its product was deleted',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Product image not found',
+      details: [],
+    },
+  })
+  @ApiConflictResponse({
+    description: 'The image is not linked to a variant',
+    type: ErrorResponseDto,
+    example: {
+      error: 'Product image is not linked to a variant',
+      details: [],
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Unexpected server error',
+    type: ErrorResponseDto,
+    examples: {
+      UnlinkFailed: {
+        summary: 'The image could not be unlinked or presigned',
+        value: {
+          error: 'Failed to unlink product image',
+          details: [],
+        },
+      },
+    },
+  })
+  public async unlinkImageVariant(
+    @Param('imageId', ParseUUIDPipe) imageId: string,
+  ): Promise<ProductImageResponseDto> {
+    const image = await this.unlinkProductImageVariantUseCase.execute(imageId);
+    return ProductsResponseMapper.toImageResponse(image);
   }
 
   @Patch(':id')

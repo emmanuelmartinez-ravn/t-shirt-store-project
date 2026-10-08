@@ -34,4 +34,14 @@ export class ProductImageResponseDto {
     example: false,
   })
   isDefault!: boolean;
+
+  @ApiProperty({
+    description:
+      'Id of the product variant the image is linked to, or null if it is not ' +
+      'linked to a variant (always null for the default image)',
+    example: '7c2e9a4b-1f3d-4a6e-8b5c-9d0e1f2a3b4c',
+    nullable: true,
+    type: String,
+  })
+  variantId!: string | null;
 }

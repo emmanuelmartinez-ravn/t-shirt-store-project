@@ -8,4 +8,5 @@ export abstract class ProductImageRepository {
   ): Promise<ProductImage[]>;
   abstract getActiveImageById(id: string): Promise<ProductImage | null>;
   abstract deleteImage(image: ProductImage): Promise<ProductImage>;
+  abstract updateImageVariant(image: ProductImage): Promise<ProductImage>;
 }

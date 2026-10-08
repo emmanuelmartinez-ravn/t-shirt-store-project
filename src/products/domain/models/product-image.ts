@@ -55,6 +55,30 @@ export class ProductImage {
     });
   }
 
+  static linkVariant(image: ProductImage, variantId: string): ProductImage {
+    return new ProductImage({
+      id: image.id,
+      imagePath: image.imagePath,
+      createdAt: image.createdAt,
+      updatedAt: new Date(),
+      deletedAt: image.deletedAt,
+      productId: image.productId,
+      variantId,
+    });
+  }
+
+  static unlinkVariant(image: ProductImage): ProductImage {
+    return new ProductImage({
+      id: image.id,
+      imagePath: image.imagePath,
+      createdAt: image.createdAt,
+      updatedAt: new Date(),
+      deletedAt: image.deletedAt,
+      productId: image.productId,
+      variantId: null,
+    });
+  }
+
   static restore(props: {
     id: string;
     imagePath: string;
