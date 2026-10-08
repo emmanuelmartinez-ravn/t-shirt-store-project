@@ -31,6 +31,7 @@ describe('GetProductByIdUseCase', () => {
       url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
   ];
 
@@ -46,6 +47,7 @@ describe('GetProductByIdUseCase', () => {
     };
     productImageUrlsService = {
       getImageUrls: jest.fn(),
+      getImageUrl: jest.fn(),
     } as unknown as jest.Mocked<ProductImageUrlsService>;
 
     productRepository.getProductById.mockResolvedValue(product);

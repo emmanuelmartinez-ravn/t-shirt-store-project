@@ -6,7 +6,9 @@ import { DeleteProductImageUseCase } from '../../application/use-cases/delete-pr
 import { DeleteProductUseCase } from '../../application/use-cases/delete-product.use-case';
 import { GetAllProductsUseCase } from '../../application/use-cases/get-all-products.use-case';
 import { GetProductByIdUseCase } from '../../application/use-cases/get-product-by-id.use-case';
+import { LinkProductImageVariantUseCase } from '../../application/use-cases/link-product-image-variant.use-case';
 import { ToggleProductDisabledUseCase } from '../../application/use-cases/toggle-product-disabled.use-case';
+import { UnlinkProductImageVariantUseCase } from '../../application/use-cases/unlink-product-image-variant.use-case';
 import { UpdateProductUseCase } from '../../application/use-cases/update-product.use-case';
 import { UploadProductImagesUseCase } from '../../application/use-cases/upload-product-images.use-case';
 import { ProductImageUrl } from '../../application/types/product-image-url';
@@ -23,6 +25,8 @@ describe('ProductsController', () => {
   let toggleProductDisabledUseCase: jest.Mocked<ToggleProductDisabledUseCase>;
   let uploadProductImagesUseCase: jest.Mocked<UploadProductImagesUseCase>;
   let deleteProductImageUseCase: jest.Mocked<DeleteProductImageUseCase>;
+  let linkProductImageVariantUseCase: jest.Mocked<LinkProductImageVariantUseCase>;
+  let unlinkProductImageVariantUseCase: jest.Mocked<UnlinkProductImageVariantUseCase>;
   let req: Request;
 
   const product = Product.restore({
@@ -38,7 +42,13 @@ describe('ProductsController', () => {
   });
   const defaultImageUrl = 'http://localhost:3000/static/product_default.png';
   const defaultImages: ProductImageUrl[] = [
-    { id: null, url: defaultImageUrl, expiresIn: null, isDefault: true },
+    {
+      id: null,
+      url: defaultImageUrl,
+      expiresIn: null,
+      isDefault: true,
+      variantId: null,
+    },
   ];
   const uploadedImages: ProductImageUrl[] = [
     {
@@ -46,12 +56,14 @@ describe('ProductsController', () => {
       url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
     {
       id: 'image-2',
       url: 'https://bucket.s3.amazonaws.com/products/product-id/second.jpg?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
   ];
   const query = {
@@ -96,6 +108,12 @@ describe('ProductsController', () => {
     deleteProductImageUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<DeleteProductImageUseCase>;
+    linkProductImageVariantUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<LinkProductImageVariantUseCase>;
+    unlinkProductImageVariantUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UnlinkProductImageVariantUseCase>;
     req = buildRequest();
 
     controller = new ProductsController(
@@ -107,6 +125,8 @@ describe('ProductsController', () => {
       toggleProductDisabledUseCase,
       uploadProductImagesUseCase,
       deleteProductImageUseCase,
+      linkProductImageVariantUseCase,
+      unlinkProductImageVariantUseCase,
     );
   });
 
@@ -399,6 +419,70 @@ describe('ProductsController', () => {
       deleteProductImageUseCase.execute.mockRejectedValue(failure);
 
       await expect(controller.deleteImage('image-id', req)).rejects.toBe(
+        failure,
+      );
+    });
+  });
+
+  describe('linkImageVariant', () => {
+    const linkedImage: ProductImageUrl = {
+      ...uploadedImages[0],
+      variantId: 'variant-id',
+    };
+
+    it('delegates to the use case with the image and variant ids and returns the mapped linked image', async () => {
+      linkProductImageVariantUseCase.execute.mockResolvedValue(linkedImage);
+
+      const result = await controller.linkImageVariant('image-1', 'variant-id');
+
+      expect(linkProductImageVariantUseCase.execute).toHaveBeenCalledWith(
+        'image-1',
+        'variant-id',
+      );
+      expect(result).toEqual(
+        ProductsResponseMapper.toImageResponse(linkedImage),
+      );
+      expect(result).toEqual({
+        id: 'image-1',
+        url: 'https://bucket.s3.amazonaws.com/products/product-id/first.png?signed',
+        expiresIn: 3600,
+        isDefault: false,
+        variantId: 'variant-id',
+      });
+    });
+
+    it('propagates use case errors', async () => {
+      const failure = new Error('link failed');
+      linkProductImageVariantUseCase.execute.mockRejectedValue(failure);
+
+      await expect(
+        controller.linkImageVariant('image-1', 'variant-id'),
+      ).rejects.toBe(failure);
+    });
+  });
+
+  describe('unlinkImageVariant', () => {
+    it('delegates to the use case with the image id and returns the mapped unlinked image', async () => {
+      unlinkProductImageVariantUseCase.execute.mockResolvedValue(
+        uploadedImages[0],
+      );
+
+      const result = await controller.unlinkImageVariant('image-1');
+
+      expect(unlinkProductImageVariantUseCase.execute).toHaveBeenCalledWith(
+        'image-1',
+      );
+      expect(result).toEqual(
+        ProductsResponseMapper.toImageResponse(uploadedImages[0]),
+      );
+      expect(result.variantId).toBeNull();
+    });
+
+    it('propagates use case errors', async () => {
+      const failure = new Error('unlink failed');
+      unlinkProductImageVariantUseCase.execute.mockRejectedValue(failure);
+
+      await expect(controller.unlinkImageVariant('image-1')).rejects.toBe(
         failure,
       );
     });

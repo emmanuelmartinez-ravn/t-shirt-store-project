@@ -74,4 +74,26 @@ export class PrismaProductImageRepository extends ProductImageRepository {
       throw error;
     }
   }
+
+  async updateImageVariant(image: ProductImage): Promise<ProductImage> {
+    try {
+      const record = await this.prisma.productImage.update({
+        where: { id: image.id, deletedAt: null },
+        data: {
+          variantId: image.variantId,
+          updatedAt: image.updatedAt,
+        },
+      });
+
+      return ProductImagesPersistenceMapper.toDomain(record);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === RECORD_NOT_FOUND
+      ) {
+        throw new ProductImageNotFoundError(image.id);
+      }
+      throw error;
+    }
+  }
 }

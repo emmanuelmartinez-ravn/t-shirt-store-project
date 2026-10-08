@@ -47,6 +47,7 @@ describe('DeleteProductImageUseCase', () => {
       url: 'https://bucket.s3.amazonaws.com/products/product-id/other.png?signed',
       expiresIn: 3600,
       isDefault: false,
+      variantId: null,
     },
   ];
   const notFoundResponse = {
@@ -72,6 +73,7 @@ describe('DeleteProductImageUseCase', () => {
       getActiveImagesByProductIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
+      updateImageVariant: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
@@ -80,6 +82,7 @@ describe('DeleteProductImageUseCase', () => {
     };
     productImageUrlsService = {
       getImageUrls: jest.fn(),
+      getImageUrl: jest.fn(),
     } as unknown as jest.Mocked<ProductImageUrlsService>;
 
     productImageRepository.getActiveImageById.mockResolvedValue(image);
@@ -164,7 +167,13 @@ describe('DeleteProductImageUseCase', () => {
 
     it('returns the default image entry built by the image list when no images remain', async () => {
       const defaultImages: ProductImageUrl[] = [
-        { id: null, url: defaultImageUrl, expiresIn: null, isDefault: true },
+        {
+          id: null,
+          url: defaultImageUrl,
+          expiresIn: null,
+          isDefault: true,
+          variantId: null,
+        },
       ];
       productImageUrlsService.getImageUrls.mockResolvedValue(defaultImages);
 

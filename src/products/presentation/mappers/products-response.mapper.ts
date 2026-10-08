@@ -42,6 +42,7 @@ export class ProductsResponseMapper {
       url: image.url,
       expiresIn: image.expiresIn,
       isDefault: image.isDefault,
+      variantId: image.variantId,
     };
   }
 }

@@ -27,7 +27,7 @@ describe('ProductImageUrlsService', () => {
       updatedAt: new Date('2026-01-02T00:00:00.000Z'),
       deletedAt: null,
       productId: 'product-id',
-      variantId: null,
+      variantId: 'variant-id',
     }),
   ];
   const defaultImageUrl = 'http://localhost:3000/static/product_default.png';
@@ -43,6 +43,7 @@ describe('ProductImageUrlsService', () => {
       getActiveImagesByProductIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
+      updateImageVariant: jest.fn(),
     };
     fileStorageService = {
       upload: jest.fn(),
@@ -76,7 +77,7 @@ describe('ProductImageUrlsService', () => {
   });
 
   describe('getImageUrls', () => {
-    it('returns a presigned url per active image, in repository order, with the default ttl', async () => {
+    it('returns a presigned url per active image, in repository order, with the default ttl and each linked variant id', async () => {
       const result = await service.getImageUrls('product-id', defaultImageUrl);
 
       expect(
@@ -95,12 +96,14 @@ describe('ProductImageUrlsService', () => {
           url: signedUrlFor(images[0].imagePath),
           expiresIn: 3600,
           isDefault: false,
+          variantId: null,
         },
         {
           id: 'image-2',
           url: signedUrlFor(images[1].imagePath),
           expiresIn: 3600,
           isDefault: false,
+          variantId: 'variant-id',
         },
       ]);
     });
@@ -130,7 +133,13 @@ describe('ProductImageUrlsService', () => {
       ).toHaveBeenCalledWith(['product-id']);
       expect(fileStorageService.getSignedUrl).not.toHaveBeenCalled();
       expect(result).toEqual([
-        { id: null, url: defaultImageUrl, expiresIn: null, isDefault: true },
+        {
+          id: null,
+          url: defaultImageUrl,
+          expiresIn: null,
+          isDefault: true,
+          variantId: null,
+        },
       ]);
     });
 
@@ -162,6 +171,62 @@ describe('ProductImageUrlsService', () => {
         'connection lost',
       );
       expect(fileStorageService.getSignedUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getImageUrl', () => {
+    it('presigns a single unlinked image with the default ttl and a null variant id', async () => {
+      const result = await service.getImageUrl(images[0]);
+
+      expect(fileStorageService.getSignedUrl).toHaveBeenCalledTimes(1);
+      expect(fileStorageService.getSignedUrl).toHaveBeenCalledWith(
+        images[0].imagePath,
+      );
+      expect(result).toEqual({
+        id: 'image-1',
+        url: signedUrlFor(images[0].imagePath),
+        expiresIn: 3600,
+        isDefault: false,
+        variantId: null,
+      });
+    });
+
+    it('includes the variant id of a linked image', async () => {
+      const result = await service.getImageUrl(images[1]);
+
+      expect(result).toEqual({
+        id: 'image-2',
+        url: signedUrlFor(images[1].imagePath),
+        expiresIn: 3600,
+        isDefault: false,
+        variantId: 'variant-id',
+      });
+    });
+
+    it('reports the configured AWS_S3_SIGNED_URL_TTL as expiresIn', async () => {
+      process.env.AWS_S3_SIGNED_URL_TTL = '900';
+
+      const result = await service.getImageUrl(images[0]);
+
+      expect(result.expiresIn).toBe(900);
+    });
+
+    it('presigns without querying the repository', async () => {
+      await service.getImageUrl(images[0]);
+
+      expect(
+        productImageRepository.getActiveImagesByProductIds,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('propagates a presign failure', async () => {
+      fileStorageService.getSignedUrl.mockRejectedValue(
+        new Error('presign failed'),
+      );
+
+      await expect(service.getImageUrl(images[0])).rejects.toThrow(
+        'presign failed',
+      );
     });
   });
 });

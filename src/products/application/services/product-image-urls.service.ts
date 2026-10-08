@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getSignedUrlTtlSeconds } from '../../../storage/config/signed-url-ttl';
 import { FileStorageService } from '../../../storage/services/file-storage.service';
+import { ProductImage } from '../../domain/models/product-image';
 import { ProductImageRepository } from '../../infrastructure/repositories/product-image.repository';
 import { ProductImageUrl } from '../types/product-image-url';
 
@@ -27,18 +28,27 @@ export class ProductImageUrlsService {
 
     if (images.length === 0 && defaultImageUrl !== undefined) {
       return [
-        { id: null, url: defaultImageUrl, expiresIn: null, isDefault: true },
+        {
+          id: null,
+          url: defaultImageUrl,
+          expiresIn: null,
+          isDefault: true,
+          variantId: null,
+        },
       ];
     }
 
-    const expiresIn = getSignedUrlTtlSeconds();
-    return Promise.all(
-      images.map(async (image) => ({
-        id: image.id,
-        url: await this.fileStorageService.getSignedUrl(image.imagePath),
-        expiresIn,
-        isDefault: false,
-      })),
-    );
+    return Promise.all(images.map((image) => this.getImageUrl(image)));
+  }
+
+  /** Presigns a single uploaded image. */
+  async getImageUrl(image: ProductImage): Promise<ProductImageUrl> {
+    return {
+      id: image.id,
+      url: await this.fileStorageService.getSignedUrl(image.imagePath),
+      expiresIn: getSignedUrlTtlSeconds(),
+      isDefault: false,
+      variantId: image.variantId,
+    };
   }
 }

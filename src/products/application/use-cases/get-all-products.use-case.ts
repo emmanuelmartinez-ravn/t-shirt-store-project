@@ -55,6 +55,7 @@ export class GetAllProductsUseCase {
               url: defaultImageUrl,
               expiresIn: null,
               isDefault: true,
+              variantId: null,
             },
           ],
         })),
@@ -87,6 +88,7 @@ export class GetAllProductsUseCase {
         url: urls[index],
         expiresIn,
         isDefault: false,
+        variantId: image.variantId,
       });
       imagesByProductId.set(image.productId, productImages);
     });

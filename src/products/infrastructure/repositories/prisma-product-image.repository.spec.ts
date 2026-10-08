@@ -195,4 +195,73 @@ describe('PrismaProductImageRepository', () => {
       );
     });
   });
+
+  describe('updateImageVariant', () => {
+    const updatedAt = new Date('2026-02-01T00:00:00.000Z');
+    const linkedRecord = { ...record, updatedAt, variantId: 'variant-id' };
+    const linkedImage = ProductImage.restore(linkedRecord);
+
+    it('writes the variant id and updatedAt of a still-live image and returns the mapped record', async () => {
+      prisma.productImage.update.mockResolvedValue(linkedRecord);
+
+      const result = await repository.updateImageVariant(linkedImage);
+
+      expect(prisma.productImage.update).toHaveBeenCalledWith({
+        where: { id: 'image-id', deletedAt: null },
+        data: { variantId: 'variant-id', updatedAt },
+      });
+      expect(result).toEqual(linkedImage);
+      expect(result).toBeInstanceOf(ProductImage);
+    });
+
+    it('writes a null variant id when unlinking', async () => {
+      const unlinkedRecord = { ...record, updatedAt, variantId: null };
+      prisma.productImage.update.mockResolvedValue(unlinkedRecord);
+
+      const result = await repository.updateImageVariant(
+        ProductImage.restore(unlinkedRecord),
+      );
+
+      expect(prisma.productImage.update).toHaveBeenCalledWith({
+        where: { id: 'image-id', deletedAt: null },
+        data: { variantId: null, updatedAt },
+      });
+      expect(result.variantId).toBeNull();
+    });
+
+    it('translates a record-not-found error into ProductImageNotFoundError', async () => {
+      prisma.productImage.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: '7.9.1',
+        }),
+      );
+
+      await expect(repository.updateImageVariant(linkedImage)).rejects.toThrow(
+        ProductImageNotFoundError,
+      );
+    });
+
+    it('rethrows other known prisma errors unchanged', async () => {
+      const failure = new Prisma.PrismaClientKnownRequestError(
+        'Foreign key constraint failed',
+        { code: 'P2003', clientVersion: '7.9.1' },
+      );
+      prisma.productImage.update.mockRejectedValue(failure);
+
+      await expect(repository.updateImageVariant(linkedImage)).rejects.toBe(
+        failure,
+      );
+    });
+
+    it('rethrows unrelated errors unchanged', async () => {
+      prisma.productImage.update.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(repository.updateImageVariant(linkedImage)).rejects.toThrow(
+        'connection lost',
+      );
+    });
+  });
 });

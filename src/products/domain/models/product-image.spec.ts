@@ -85,6 +85,94 @@ describe('ProductImage', () => {
     });
   });
 
+  describe('linkVariant', () => {
+    const unlinked = ProductImage.restore({
+      id: 'image-id',
+      imagePath: 'products/product-id/image.png',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      productId: 'product-id',
+      variantId: null,
+    });
+
+    it('returns a new image linked to the given variant with a fresh updatedAt', () => {
+      const before = Date.now();
+
+      const linked = ProductImage.linkVariant(unlinked, 'variant-id');
+
+      const after = Date.now();
+      expect(linked).toBeInstanceOf(ProductImage);
+      expect(linked).not.toBe(unlinked);
+      expect(linked.variantId).toBe('variant-id');
+      expect(linked.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(linked.updatedAt.getTime()).toBeLessThanOrEqual(after);
+    });
+
+    it('keeps every other field of the original image', () => {
+      const linked = ProductImage.linkVariant(unlinked, 'variant-id');
+
+      expect(linked).toMatchObject({
+        id: 'image-id',
+        imagePath: 'products/product-id/image.png',
+        createdAt: unlinked.createdAt,
+        deletedAt: null,
+        productId: 'product-id',
+      });
+    });
+
+    it('leaves the original image untouched', () => {
+      ProductImage.linkVariant(unlinked, 'variant-id');
+
+      expect(unlinked.variantId).toBeNull();
+      expect(unlinked.updatedAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+    });
+  });
+
+  describe('unlinkVariant', () => {
+    const linked = ProductImage.restore({
+      id: 'image-id',
+      imagePath: 'products/product-id/image.png',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      deletedAt: null,
+      productId: 'product-id',
+      variantId: 'variant-id',
+    });
+
+    it('returns a new image with no variant and a fresh updatedAt', () => {
+      const before = Date.now();
+
+      const unlinked = ProductImage.unlinkVariant(linked);
+
+      const after = Date.now();
+      expect(unlinked).toBeInstanceOf(ProductImage);
+      expect(unlinked).not.toBe(linked);
+      expect(unlinked.variantId).toBeNull();
+      expect(unlinked.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(unlinked.updatedAt.getTime()).toBeLessThanOrEqual(after);
+    });
+
+    it('keeps every other field of the original image', () => {
+      const unlinked = ProductImage.unlinkVariant(linked);
+
+      expect(unlinked).toMatchObject({
+        id: 'image-id',
+        imagePath: 'products/product-id/image.png',
+        createdAt: linked.createdAt,
+        deletedAt: null,
+        productId: 'product-id',
+      });
+    });
+
+    it('leaves the original image untouched', () => {
+      ProductImage.unlinkVariant(linked);
+
+      expect(linked.variantId).toBe('variant-id');
+      expect(linked.updatedAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+    });
+  });
+
   describe('restore', () => {
     it('rehydrates all fields as-is from persistence', () => {
       const props = {

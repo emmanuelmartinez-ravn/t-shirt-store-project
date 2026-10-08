@@ -21,12 +21,14 @@ describe('ProductsResponseMapper', () => {
     url: 'https://bucket.s3.amazonaws.com/products/product-id/image.png?signed',
     expiresIn: 3600,
     isDefault: false,
+    variantId: null,
   };
   const defaultImage: ProductImageUrl = {
     id: null,
     url: 'http://localhost:3000/static/product_default.png',
     expiresIn: null,
     isDefault: true,
+    variantId: null,
   };
 
   describe('toResponse', () => {
@@ -158,15 +160,32 @@ describe('ProductsResponseMapper', () => {
         url: 'https://bucket.s3.amazonaws.com/products/product-id/image.png?signed',
         expiresIn: 3600,
         isDefault: false,
+        variantId: null,
       });
     });
 
-    it('maps the default image with null id and expiresIn', () => {
+    it('copies the linked variant id of an uploaded image', () => {
+      const linkedImage: ProductImageUrl = {
+        ...uploadedImage,
+        variantId: 'variant-id',
+      };
+
+      expect(ProductsResponseMapper.toImageResponse(linkedImage)).toEqual({
+        id: 'image-id',
+        url: 'https://bucket.s3.amazonaws.com/products/product-id/image.png?signed',
+        expiresIn: 3600,
+        isDefault: false,
+        variantId: 'variant-id',
+      });
+    });
+
+    it('maps the default image with null id, expiresIn and variantId', () => {
       expect(ProductsResponseMapper.toImageResponse(defaultImage)).toEqual({
         id: null,
         url: 'http://localhost:3000/static/product_default.png',
         expiresIn: null,
         isDefault: true,
+        variantId: null,
       });
     });
 
