@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": ["Bash(node .claude/tools/db-query/query.mjs *)"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/db-readonly-guard.mjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking DB read-only guard"
+          }
+        ]
+      }
+    ]
+  }
+}
