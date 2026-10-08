@@ -15,7 +15,7 @@ This is supplementary detail. `CLAUDE.md` (repo root) is the canonical, auto-loa
 - **Testing**: Jest + `ts-jest` for unit tests, a separate Jest config (`test/jest-e2e.json`) for e2e
 - **Lint/format**: ESLint 9 flat config (`typescript-eslint` recommended + type-checked, `eslint-plugin-jest` on `*.spec.ts`) + Prettier
 - **Package manager**: pnpm (see `pnpm-workspace.yaml` for the build-approval allowlist — native modules like `bcrypt` and Prisma engines need `allowBuilds`)
-- **Git hooks**: husky `pre-commit` runs `pnpm lint && pnpm test` — every commit is gated on this
+- **Git hooks**: husky `pre-commit` runs `pnpm lint && pnpm test` — every commit that touches code is gated on this; docs/Claude-config-only commits skip it (allowlist in `.husky/lib/non-code-only.sh`, shared with `/pr` and `verify-and-commit`)
 
 Two cross-cutting modules sit outside the per-domain folders (see CLAUDE.md's Architecture section for the full per-domain layout):
 
@@ -28,7 +28,7 @@ Both filters are registered globally in `main.ts` (`PrismaExceptionFilter` befor
 
 Before treating any change as done:
 
-1. **`pnpm lint`** — must be clean. The husky `pre-commit` hook enforces this on every commit already, but don't rely on the hook alone when scoping work across branches (see Don'ts).
+1. **`pnpm lint`** — must be clean. The husky `pre-commit` hook enforces this on every commit that touches code already, but don't rely on the hook alone when scoping work across branches (see Don'ts).
 2. **`pnpm test`** — all suites passing. Console `ERROR`/`WARN` lines from Nest's logger during negative-path tests are expected output, not failures — check the actual Jest summary (`Tests: N passed, N total`).
 3. **`pnpm build`** — a clean `nest build` is the real signal that everything type-checks and wires together, especially after touching `app.module.ts`, module wiring, or cross-module imports. Lint alone doesn't catch every wiring issue.
 4. For anything touching HTTP behavior, checking the Swagger doc at `/docs` after `pnpm start:dev` is the closest thing this repo has to a manual smoke test. Kill the process (and anything left on port 3000) once you're done — see CLAUDE.md's Agent workflow notes.

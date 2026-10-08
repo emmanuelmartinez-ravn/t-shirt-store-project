@@ -38,7 +38,7 @@ pnpm prisma db seed          # seed the default roles (prisma/seed.ts: "manager"
 ```
 The `prisma-cli` and `prisma-client-api` skills are available for detailed Prisma command/query reference.
 
-A husky `pre-commit` hook runs `pnpm lint` and `pnpm test` — keep both green before committing.
+A husky `pre-commit` hook runs `pnpm lint` and `pnpm test` — keep both green before committing. Commits whose staged files are all docs/Claude config (`*.md`, `docs/`, `plans/`, `.claude/`, `skills-lock.json`, `.env.example`, `.gitignore`, `docker/`) skip both, since neither can be affected; the list lives in `.husky/lib/non-code-only.sh`. Any code file in the commit runs the full checks.
 
 ## Agent workflow notes
 
