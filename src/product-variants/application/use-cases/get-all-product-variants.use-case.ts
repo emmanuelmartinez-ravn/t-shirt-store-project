@@ -4,8 +4,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PaginatedResult } from '../../../common/pagination/paginated-result';
-import { ProductVariant } from '../../domain/models/product-variant';
+import { ProductImageUrlsService } from '../../../products/application/services/product-image-urls.service';
 import { ProductVariantRepository } from '../../infrastructure/repositories/product-variant.repository';
+import { ProductVariantWithImages } from '../types/product-variant-with-images';
 
 @Injectable()
 export class GetAllProductVariantsUseCase {
@@ -15,6 +16,7 @@ export class GetAllProductVariantsUseCase {
 
   constructor(
     private readonly productVariantRepository: ProductVariantRepository,
+    private readonly productImageUrlsService: ProductImageUrlsService,
   ) {}
 
   async execute(params: {
@@ -24,14 +26,25 @@ export class GetAllProductVariantsUseCase {
     disabled: boolean;
     liked?: boolean;
     userId?: string;
-  }): Promise<PaginatedResult<ProductVariant>> {
+  }): Promise<PaginatedResult<ProductVariantWithImages>> {
     try {
       const result =
         await this.productVariantRepository.getAllProductVariants(params);
+      const imagesByVariantId =
+        await this.productImageUrlsService.getImageUrlsByVariantIds(
+          result.items.map((variant) => variant.id),
+        );
+
       this.logger.log(
         `Retrieved ${result.items.length} product variants (page ${params.page})`,
       );
-      return result;
+      return {
+        items: result.items.map((variant) => ({
+          variant,
+          images: imagesByVariantId.get(variant.id) ?? [],
+        })),
+        total: result.total,
+      };
     } catch (error) {
       this.logger.error('Failed to retrieve product variants', error);
       throw new InternalServerErrorException({

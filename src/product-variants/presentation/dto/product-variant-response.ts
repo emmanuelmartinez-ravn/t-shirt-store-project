@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductImageResponseDto } from '../../../products/presentation/dto/product-image-response';
 
 export class ProductVariantResponseDto {
   @ApiProperty({
@@ -56,4 +57,12 @@ export class ProductVariantResponseDto {
     type: String,
   })
   deletedAt!: Date | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Product images linked to this variant, ordered by upload date (oldest first); an empty list when none are linked. Present on every GET product-variants response, omitted on create/update/delete responses',
+    type: ProductImageResponseDto,
+    isArray: true,
+  })
+  images?: ProductImageResponseDto[];
 }

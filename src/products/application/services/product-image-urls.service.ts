@@ -41,6 +41,32 @@ export class ProductImageUrlsService {
     return Promise.all(images.map((image) => this.getImageUrl(image)));
   }
 
+  /**
+   * Builds the image lists of several variants with presigned URLs from a
+   * single query, keyed by variant id and ordered by upload date. Variants with
+   * no linked images are absent from the map (no default image fallback).
+   */
+  async getImageUrlsByVariantIds(
+    variantIds: string[],
+  ): Promise<Map<string, ProductImageUrl[]>> {
+    const images =
+      await this.productImageRepository.getActiveImagesByVariantIds(variantIds);
+    const imageUrls = await Promise.all(
+      images.map((image) => this.getImageUrl(image)),
+    );
+
+    const imagesByVariantId = new Map<string, ProductImageUrl[]>();
+    images.forEach((image, index) => {
+      if (image.variantId === null) {
+        return;
+      }
+      const variantImages = imagesByVariantId.get(image.variantId) ?? [];
+      variantImages.push(imageUrls[index]);
+      imagesByVariantId.set(image.variantId, variantImages);
+    });
+    return imagesByVariantId;
+  }
+
   /** Presigns a single uploaded image. */
   async getImageUrl(image: ProductImage): Promise<ProductImageUrl> {
     return {
