@@ -52,6 +52,6 @@ import { ProductImageUrlsService } from './application/services/product-image-ur
     JwtAuthGuard,
     PoliciesGuard,
   ],
-  exports: [ProductRepository],
+  exports: [ProductRepository, ProductImageUrlsService],
 })
 export class ProductsModule {}

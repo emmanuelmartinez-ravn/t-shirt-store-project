@@ -166,8 +166,8 @@ export class ProductVariantsController {
       disabled: false,
     });
     return {
-      data: items.map((variant) =>
-        ProductVariantResponseMapper.toResponse(variant),
+      data: items.map(({ variant, images }) =>
+        ProductVariantResponseMapper.toResponse(variant, images),
       ),
       pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
     };
@@ -216,8 +216,8 @@ export class ProductVariantsController {
       userId: req.user!.sub,
     });
     return {
-      data: items.map((variant) =>
-        ProductVariantResponseMapper.toResponse(variant),
+      data: items.map(({ variant, images }) =>
+        ProductVariantResponseMapper.toResponse(variant, images),
       ),
       pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
     };
@@ -261,8 +261,8 @@ export class ProductVariantsController {
       disabled: true,
     });
     return {
-      data: items.map((variant) =>
-        ProductVariantResponseMapper.toResponse(variant),
+      data: items.map(({ variant, images }) =>
+        ProductVariantResponseMapper.toResponse(variant, images),
       ),
       pagination: PaginationMapper.buildMeta(query.page, query.limit, total),
     };

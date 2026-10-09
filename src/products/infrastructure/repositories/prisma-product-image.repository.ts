@@ -45,6 +45,23 @@ export class PrismaProductImageRepository extends ProductImageRepository {
     );
   }
 
+  async getActiveImagesByVariantIds(
+    variantIds: string[],
+  ): Promise<ProductImage[]> {
+    if (variantIds.length === 0) {
+      return [];
+    }
+
+    const records = await this.prisma.productImage.findMany({
+      where: { variantId: { in: variantIds }, deletedAt: null },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    return records.map((record) =>
+      ProductImagesPersistenceMapper.toDomain(record),
+    );
+  }
+
   async getActiveImageById(id: string): Promise<ProductImage | null> {
     const record = await this.prisma.productImage.findFirst({
       where: { id, deletedAt: null },
