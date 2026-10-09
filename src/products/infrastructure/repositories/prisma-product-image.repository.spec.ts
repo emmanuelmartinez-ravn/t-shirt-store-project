@@ -122,6 +122,54 @@ describe('PrismaProductImageRepository', () => {
     });
   });
 
+  describe('getActiveImagesByVariantIds', () => {
+    const linkedRecord = { ...record, variantId: 'variant-id' };
+    const otherLinkedRecord = { ...otherRecord, variantId: 'other-variant-id' };
+
+    it('fetches the live images linked to all given variants oldest first and maps them to domain entities', async () => {
+      prisma.productImage.findMany.mockResolvedValue([
+        linkedRecord,
+        otherLinkedRecord,
+      ]);
+
+      const result = await repository.getActiveImagesByVariantIds([
+        'variant-id',
+        'other-variant-id',
+      ]);
+
+      expect(prisma.productImage.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.productImage.findMany).toHaveBeenCalledWith({
+        where: {
+          variantId: { in: ['variant-id', 'other-variant-id'] },
+          deletedAt: null,
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      });
+      expect(result).toEqual([
+        ProductImage.restore(linkedRecord),
+        ProductImage.restore(otherLinkedRecord),
+      ]);
+      expect(result[0]).toBeInstanceOf(ProductImage);
+    });
+
+    it('returns an empty list without querying when no variant ids are given', async () => {
+      const result = await repository.getActiveImagesByVariantIds([]);
+
+      expect(prisma.productImage.findMany).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('propagates persistence failures', async () => {
+      prisma.productImage.findMany.mockRejectedValue(
+        new Error('connection lost'),
+      );
+
+      await expect(
+        repository.getActiveImagesByVariantIds(['variant-id']),
+      ).rejects.toThrow('connection lost');
+    });
+  });
+
   describe('getActiveImageById', () => {
     it('looks up the non-deleted image by id and maps it to a domain entity', async () => {
       prisma.productImage.findFirst.mockResolvedValue(record);

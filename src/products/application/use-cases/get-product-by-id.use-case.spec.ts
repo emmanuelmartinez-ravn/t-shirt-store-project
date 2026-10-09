@@ -47,6 +47,7 @@ describe('GetProductByIdUseCase', () => {
     };
     productImageUrlsService = {
       getImageUrls: jest.fn(),
+      getImageUrlsByVariantIds: jest.fn(),
       getImageUrl: jest.fn(),
     } as unknown as jest.Mocked<ProductImageUrlsService>;
 

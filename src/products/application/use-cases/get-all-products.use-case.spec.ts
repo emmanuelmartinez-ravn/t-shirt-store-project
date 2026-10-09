@@ -74,6 +74,7 @@ describe('GetAllProductsUseCase', () => {
       countActiveImages: jest.fn(),
       createImages: jest.fn(),
       getActiveImagesByProductIds: jest.fn(),
+      getActiveImagesByVariantIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
       updateImageVariant: jest.fn(),

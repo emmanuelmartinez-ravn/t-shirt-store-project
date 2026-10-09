@@ -71,6 +71,7 @@ describe('DeleteProductImageUseCase', () => {
       countActiveImages: jest.fn(),
       createImages: jest.fn(),
       getActiveImagesByProductIds: jest.fn(),
+      getActiveImagesByVariantIds: jest.fn(),
       getActiveImageById: jest.fn(),
       deleteImage: jest.fn(),
       updateImageVariant: jest.fn(),
@@ -82,6 +83,7 @@ describe('DeleteProductImageUseCase', () => {
     };
     productImageUrlsService = {
       getImageUrls: jest.fn(),
+      getImageUrlsByVariantIds: jest.fn(),
       getImageUrl: jest.fn(),
     } as unknown as jest.Mocked<ProductImageUrlsService>;
 
